@@ -1,0 +1,60 @@
+{{!-- New comment form partial --}}
+<section class="new-comment-form" aria-labelledby="new-comment-heading">
+  <h3 id="new-comment-heading" style="margin:0 0 1rem 0; font-size:1.1rem; color:#4a5568;">Add Your Comment</h3>
+  
+  <form method="POST" action="/api/comments" class="comment-form">
+    <div class="form-group">
+      <label for="comment-content" style="display:block; font-weight:600; margin-bottom:0.5rem; color:#1a202c;">Your Comment</label>
+      <textarea 
+        id="comment-content" 
+        name="content" 
+        rows="4" 
+        required 
+        placeholder="Share your thoughts about this project..."
+        style="width:100%; box-sizing:border-box; padding:0.75rem; border:1px solid #e2e8f0; border-radius:4px; font-size:1rem; font-family:inherit; resize:vertical; min-height:100px;"
+      ></textarea>
+    </div>
+
+    <div class="form-actions" style="display:flex; justify-content:space-between; align-items:center; margin-top:1rem;">
+      <div style="color:#718096; font-size:0.9rem;">
+        <span>💡 Be respectful and constructive in your comments</span>
+      </div>
+      <div style="display:flex; gap:0.75rem;">
+        <button 
+          type="submit" 
+          style="background:#2b6cb0; color:#fff; padding:0.6rem 1rem; border-radius:6px; font-weight:600; border:none; cursor:pointer; font-family:inherit;"
+        >
+          Post Comment
+        </button>
+      </div>
+    </div>
+  </form>
+</section>
+
+<style>
+  .new-comment-form {
+    background:#f1f5f9; 
+    border-left:4px solid #2b6cb0; 
+    padding:1.5rem; 
+    border-radius:6px; 
+    margin:1rem 0;
+  }
+  
+  .new-comment-form textarea:focus {
+    outline:none; 
+    border-color:#2b6cb0; 
+    box-shadow:0 0 0 3px rgba(43,108,176,0.1);
+  }
+  
+  .new-comment-form button:hover {
+    opacity:0.9;
+  }
+  
+  .new-comment-form button[type="submit"]:hover {
+    background:#2c5aa0;
+  }
+  
+  .new-comment-form button[type="button"]:hover {
+    background:#e2e8f0;
+  }
+</style>

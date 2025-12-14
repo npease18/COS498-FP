@@ -1,0 +1,21 @@
+<nav style="display:flex; align-items:center; gap:1rem; background:#fff; padding:1rem 2rem; margin:0 auto; max-width:900px; border-radius:8px; box-shadow:0 8px 24px rgba(11,22,33,0.06); margin-top:10px; margin-bottom:10px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;">
+    <div style="display:flex; gap:1rem;">
+        <a href="/" style="text-decoration:none; color:#1a202c; font-weight:600; padding:0.5rem; border-radius:4px; transition:background 0.2s;">Home</a>
+        <a href="/comments" style="text-decoration:none; color:#1a202c; font-weight:600; padding:0.5rem; border-radius:4px; transition:background 0.2s;">Comments</a>
+    </div>
+
+    <div style="margin-left:auto; display:flex; gap:0.75rem; align-items:center;">
+        {{#if user}}
+            {{!-- Signed in user buttons --}}
+            <span style="color:#4a5568; font-size:0.9rem; margin-right:0.5rem;">Welcome, {{user.username}}!</span>
+            <a href="/comments/new" style="text-decoration:none; background:#2b6cb0; color:#fff; padding:0.6rem 1rem; border-radius:6px; font-weight:600;">New Comment</a>
+            <form action="/api/logout" method="post" style="display:inline;">
+                <button type="submit" style="text-decoration:none; background:#edf2f7; color:#1a202c; padding:0.6rem 1rem; border-radius:6px; font-weight:600; border:none; cursor:pointer; font-family: inherit;font-size: 16px;">Sign Out</button>
+            </form>
+        {{else}}
+            {{!-- Not signed in buttons --}}
+            <a href="/register" style="text-decoration:none; background:#2b6cb0; color:#fff; padding:0.6rem 1rem; border-radius:6px; font-weight:600;">Register</a>
+            <a href="/login" style="text-decoration:none; background:#edf2f7; color:#1a202c; padding:0.6rem 1rem; border-radius:6px; font-weight:600;">Sign In</a>
+        {{/if}}
+    </div>
+</nav>

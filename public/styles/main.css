@@ -1,0 +1,44 @@
+/* Themeing */
+:root {
+    --primary-color: #4C5454;
+    --secondary-color: #fff;
+    --accent-color: #AEF78E;
+    --tirtiary-color: #2E0014;
+    --additional-color: #B80C09;
+}
+
+a .active {
+    background-color: var(--accent-color);
+    color: var(--primary-color);
+}
+
+#navbar_frame {
+    width: 100%;
+    border: none;
+    height: 55px;
+    overflow: hidden;
+}
+
+body {
+    background-color: var(--secondary-color);
+}
+
+#notable_ac_table {
+    padding-left: 45px;
+    padding-right: 45px;
+    width: 100%;
+}
+
+.notable_ac_table_img {
+    width: 100%;
+}
+
+.notable_ac_table_caption {
+    font-weight: bolder;
+    font-size: 30px;
+}
+
+.notable_ac_table_caption > a {
+    text-decoration: none;
+    color: black;
+}

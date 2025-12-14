@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>All Comments — Comment Corner</title>
+  <link rel="icon" type="image/x-icon" href="/favicon.ico">
+  <link rel="stylesheet" type="text/css" href="/styles/main.css">
+  <style>
+    /* Consistent styling with the rest of the site */
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial; background:#f7fafc; color:#1a202c; margin:0; padding-top: 10px; padding-left: 5px; padding-right: 5px; }
+    .wrap { max-width:900px; margin:0 auto; background:#fff; padding:2rem; border-radius:8px; box-shadow:0 8px 24px rgba(11,22,33,0.06); margin-top: 25px; }
+    header h1 { margin:0 0 0.25rem 0; font-size:1.6rem; }
+    header p.lead { margin:0 0 1rem 0; color:#4a5568; }
+    .page-actions { display:flex; justify-content:space-between; align-items:center; margin:1rem 0; padding:1rem; background:#f1f5f9; border-radius:6px; }
+    .btn { display:inline-block; text-decoration:none; padding:0.6rem 1rem; border-radius:6px; font-weight:600; }
+    .btn-primary { background:#2b6cb0; color:#fff; }
+    .btn-secondary { background:#edf2f7; color:#1a202c; }
+    .comments-list { margin-top:1rem; }
+    .comment-item { background:#fff; border:1px solid #e2e8f0; border-radius:6px; padding:1.5rem; margin-bottom:1rem; transition:box-shadow 0.2s; }
+    .comment-item:hover { box-shadow:0 4px 12px rgba(11,22,33,0.08); }
+    .comment-header { display:flex; align-items:center; gap:1rem; margin-bottom:0.75rem; }
+    .avatar { width:40px; height:40px; border-radius:50%; background:#2b6cb0; color:#fff; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:0.9rem; }
+    .comment-meta { flex:1; }
+    .comment-author { font-weight:600; color:#1a202c; margin:0; }
+    .comment-date { color:#718096; font-size:0.85rem; margin:0; }
+    .comment-content { color:#4a5568; line-height:1.6; margin-bottom:0.75rem; }
+    .comment-actions { display:flex; gap:0.75rem; font-size:0.9rem; }
+    .comment-actions a { color:#718096; text-decoration:none; }
+    .comment-actions a:hover { color:#2b6cb0; text-decoration:underline; }
+    .stats { display:flex; gap:1rem; color:#718096; font-size:0.9rem; }
+    .empty-state { text-align:center; padding:3rem 1rem; color:#718096; }
+    .empty-state h3 { color:#4a5568; margin-bottom:0.5rem; }
+    .filter-bar { display:flex; gap:1rem; align-items:center; margin-bottom:1rem; font-size:0.9rem; }
+    .filter-bar select { padding:0.5rem; border:1px solid #e2e8f0; border-radius:4px; background:#fff; }
+  </style>
+</head>
+<body>
+  {{> nav}}
+
+  <main class="wrap">
+    <header>
+      <h1>Community Comments</h1>
+      <p class="lead">Browse all discussions and join the conversation.</p>
+    </header>
+
+    <div id="new-comment-section">
+      {{> ncf}}
+    </div>
+
+    <section class="comments-list" aria-labelledby="comments-heading">
+      <h2 id="comments-heading" style="margin:0 0 1rem 0; font-size:1.1rem; color:#4a5568;">Recent Discussions</h2>
+
+      {{#if comments.length}}
+        {{#each comments}}
+          {{> comment}}
+        {{/each}}
+      {{else}}
+        <div class="empty-state">
+          <h3>No comments yet</h3>
+          <p>Be the first to share your thoughts! <br/>
+          <a href="/comments/new" class="btn btn-primary" style="margin-top:1rem; display:inline-block;">Add a New Comment</a></p>
+        </div>
+      {{/if}}
+    </section>
+  </main>
+
+  {{> footer}}
+</body>
+</html>

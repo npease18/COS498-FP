@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sign In — Comment Corner</title>
+  <link rel="icon" type="image/x-icon" href="/favicon.ico">
+  <link rel="stylesheet" type="text/css" href="/styles/main.css">
+  <style>
+    /* Consistent styling with the rest of the site */
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial; background:#f7fafc; color:#1a202c; margin:0; padding-top: 10px; padding-left: 5px; padding-right: 5px; }
+    .wrap { max-width:900px; margin:0 auto; background:#fff; padding:2rem; border-radius:8px; box-shadow:0 8px 24px rgba(11,22,33,0.06); margin-top: 25px; }
+    header h1 { margin:0 0 0.25rem 0; font-size:1.6rem; }
+    header p.lead { margin:0 0 1rem 0; color:#4a5568; }
+    .form-container { background:#f1f5f9; border-left:4px solid #2b6cb0; padding:1.5rem; border-radius:6px; margin:1rem 0; }
+    .form-group { margin-bottom:1rem; }
+    .form-group label { display:block; font-weight:600; margin-bottom:0.5rem; color:#1a202c; }
+    .form-group input { width:100%; box-sizing:border-box; padding:0.75rem; border:1px solid #e2e8f0; border-radius:4px; font-size:1rem; }
+    .form-group input:focus { outline:none; border-color:#2b6cb0; box-shadow:0 0 0 3px rgba(43,108,176,0.1); }
+    .btn { display:inline-block; text-decoration:none; padding:0.75rem 1.5rem; border-radius:6px; font-weight:600; border:none; cursor:pointer; font-size:1rem; }
+    .btn-primary { background:#2b6cb0; color:#fff; }
+    .btn-primary:hover { background:#2c5aa0; }
+    .btn-secondary { background:#edf2f7; color:#1a202c; text-decoration:none; }
+    .form-footer { margin-top:1.5rem; padding-top:1rem; border-top:1px solid #e2e8f0; text-align:center; color:#4a5568; }
+    .form-footer a { color:#2b6cb0; text-decoration:none; font-weight:600; }
+    .form-footer a:hover { text-decoration:underline; }
+    .info { margin-top:1.25rem; color:#4a5568; line-height:1.5; }
+    .forgot-password { text-align:right; margin-top:0.5rem; }
+    .forgot-password a { color:#718096; text-decoration:none; font-size:0.9rem; }
+    .forgot-password a:hover { text-decoration:underline; }
+  </style>
+</head>
+<body>
+  {{> nav}}
+
+  <main class="wrap">
+    <header>
+      <h1>Welcome Back</h1>
+      <p class="lead">Sign in to your Comment Corner account to continue participating in discussions.</p>
+    </header>
+
+    <section class="form-container" aria-labelledby="login-form">
+      <h2 id="login-form" style="margin:0 0 1rem 0; font-size:1.1rem;">Sign In</h2>
+      
+      {{#if error}}
+        <div class="error-message" style="background:#fee; border:1px solid #fcc; color:#c00; padding:0.75rem; border-radius:4px; margin-bottom:1rem; font-size:0.9rem;">
+          <strong>Error:</strong> {{error}}
+        </div>
+      {{/if}}
+      
+      <form method="POST" action="/api/login">
+        <div class="form-group">
+          <label for="username">Username or Email</label>
+          <input id="username" name="username" type="text" required placeholder="Enter your username or email" value="{{username}}">
+        </div>
+
+        <div class="form-group">
+          <label for="password">Password</label>
+          <input id="password" name="password" type="password" required placeholder="Enter your password">
+        </div>
+
+        <div style="display:flex; gap:1rem; align-items:center; margin-top:1.5rem;">
+          <button type="submit" class="btn btn-primary">Sign In</button>
+        </div>
+      </form>
+
+      <div class="form-footer">
+        <p>Don't have an account? <a href="/register">Create one here</a></p>
+      </div>
+    </section>
+
+    <section class="info" aria-labelledby="login-info">
+      <h3 id="login-info" style="margin-top:0;">After signing in, you can:</h3>
+      <ul>
+        <li>Visit <code>/comments/new</code> to create new comments</li>
+        <li>Engage with other community members</li>
+      </ul>
+    </section>
+  </main>
+
+  {{> footer}}
+</body>
+</html>
