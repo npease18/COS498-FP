@@ -1,0 +1,60 @@
+import argon2 from 'argon2';
+
+export const PasswordPolicyValidationCode = {
+    VALID: 0,
+    TOO_SHORT: 1,
+    MISSING_UPPERCASE: 2,
+    MISSING_LOWERCASE: 3,
+    MISSING_DIGIT: 4,
+    MISSING_SPECIAL_CHAR: 5
+}
+
+const ARGON2_CONFIG = {
+    type: argon2.argon2id,  // Uses a hybrid approach (best for most cases)
+    memoryCost: 65536,      // 64 MB memory cost
+    timeCost: 3,            // Number of iterations
+    parallelism: 4          // Number of parallel threads
+}
+
+const PASSWORD_SETTINGS = {
+    minLength: 8,
+    requireUppercase: true,
+    requireLowercase: true,
+    requireDigit: true,
+    requireSpecialChar: true
+}
+
+class EncryptionManager {
+    static async validatePasswordPolicy(password) {
+        if (password.length < PASSWORD_SETTINGS.minLength) {
+            return PasswordPolicyValidationCode.TOO_SHORT;
+        }
+        if (PASSWORD_SETTINGS.requireUppercase && !/[A-Z]/.test(password)) {
+            return PasswordPolicyValidationCode.MISSING_UPPERCASE;
+        }
+        if (PASSWORD_SETTINGS.requireLowercase && !/[a-z]/.test(password)) {
+            return PasswordPolicyValidationCode.MISSING_LOWERCASE;
+        }
+        if (PASSWORD_SETTINGS.requireDigit && !/[0-9]/.test(password)) {
+            return PasswordPolicyValidationCode.MISSING_DIGIT;
+        }
+        if (PASSWORD_SETTINGS.requireSpecialChar && !/[!@#$%^&*(),.?":{}|<>]/.test(password)) {
+            return PasswordPolicyValidationCode.MISSING_SPECIAL_CHAR;
+        }
+        return PasswordPolicyValidationCode.VALID;
+    }
+
+    static async encryptPassword(plaintextPassword) {
+        return await argon2.hash(plaintextPassword, ARGON2_CONFIG);
+    }
+
+    static async verifyPassword(hashedPassword, plaintextPassword) {
+        try {
+            return await argon2.verify(hashedPassword, plaintextPassword, ARGON2_CONFIG);
+        } catch (err) {
+            return false;
+        }
+    }
+}
+
+export default EncryptionManager;

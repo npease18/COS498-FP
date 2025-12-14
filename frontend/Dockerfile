@@ -1,10 +1,7 @@
 FROM nginx:alpine
 
-# Copy custom nginx configuration
-COPY ../frontend/default.conf /etc/nginx/conf.d/default.conf
-
-# Copy static files to nginx html directory
-COPY ../public/ /usr/share/nginx/html/
+# Create directory for nginx html if it doesn't exist
+RUN mkdir -p /usr/share/nginx/html
 
 EXPOSE 80
 

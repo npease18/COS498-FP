@@ -7,8 +7,14 @@ services:
     container_name: backend-nodejs
     restart: unless-stopped
     environment:
-      - NODE_ENV=production
+      - NODE_ENV=development
       - PORT=3000
+    volumes:
+      - ./backend:/app/backend
+      - ./views:/app/views
+      - ./partials:/app/partials
+      - ./public:/app/public
+      - /app/backend/node_modules  # Anonymous volume to preserve node_modules
     # No ports exposed - only nginx can access this container
     networks:
       - app-network
@@ -22,6 +28,9 @@ services:
     restart: unless-stopped
     ports:
       - "80:80"  # Only nginx exposes ports to the host
+    volumes:
+      - ./frontend/default.conf:/etc/nginx/conf.d/default.conf
+      - ./public:/usr/share/nginx/html
     depends_on:
       - backend-nodejs
     networks:
