@@ -1,12 +1,12 @@
 import argon2 from 'argon2';
 
 export const PasswordPolicyValidationCode = {
-    VALID: 0,
-    TOO_SHORT: 1,
-    MISSING_UPPERCASE: 2,
-    MISSING_LOWERCASE: 3,
-    MISSING_DIGIT: 4,
-    MISSING_SPECIAL_CHAR: 5
+    VALID: "OK",
+    TOO_SHORT: "Password is too short.",
+    MISSING_UPPERCASE: "Password must contain at least one uppercase letter.",
+    MISSING_LOWERCASE: "Password must contain at least one lowercase letter.",
+    MISSING_DIGIT: "Password must contain at least one digit.",
+    MISSING_SPECIAL_CHAR: "Password must contain at least one special character."
 }
 
 const ARGON2_CONFIG = {

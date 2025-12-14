@@ -34,8 +34,8 @@ class CommentManager {
             res.redirect('/comments');
             return { success: true };
         } catch (error) {
-            return { success: false, message: 'Failed to add comment' };
             res.redirect('/comments/new');
+            return { success: false, message: 'Failed to add comment' };
         }
     }
 
@@ -46,13 +46,15 @@ class CommentManager {
         }
 
         const getCommentsQuery = `
-            SELECT username, content, created_at
+            SELECT users.display_name, content, comments.created_at
             FROM comments
-            ORDER BY created_at DESC
+            LEFT JOIN users ON comments.username = users.username
+            ORDER BY comments.created_at DESC
         `;
+
         try {
             const comments = await this.db.queryAll(getCommentsQuery);
-            res.locals.comments = comments.map(c => new Comment(c.username, c.content, c.created_at));
+            res.locals.comments = comments.map(c => new Comment(c.display_name, c.content, c.created_at));
             next();
         } catch (error) {
             next(error);

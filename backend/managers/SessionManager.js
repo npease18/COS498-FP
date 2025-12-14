@@ -22,6 +22,7 @@ class SessionManager {
         const sessionLookupQuery = `
             SELECT *
             FROM sessions
+            LEFT JOIN users ON sessions.username = users.username
             WHERE session_id = ?
         `
 
@@ -37,6 +38,15 @@ class SessionManager {
         `;
 
         this.db.execute(sessionDeleteQuery, [sessionId]);
+    }
+
+    async invalidateUserSessions(username) {
+        const userSessionsDeleteQuery = `
+            DELETE FROM sessions
+            WHERE username = ?
+        `;
+
+        await this.db.execute(userSessionsDeleteQuery, [username]);
     }
 
 }

@@ -29,6 +29,10 @@ class RoutingManager {
             res.render('register');
         });
 
+        this.app.get('/profile', (req, res) => {
+            res.render('profile');
+        });
+
         this.app.get('/comments', (req, res) => {
             res.render('comments');
         });
@@ -49,7 +53,6 @@ class RoutingManager {
     setupHandlebars() {
         // Handlebars
         this.app.set('view engine', 'hbs');
-        console.log('PWD:', process.cwd());
         this.app.set('views', '../views');
 
         // Register partials directory

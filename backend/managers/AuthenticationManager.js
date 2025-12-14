@@ -1,6 +1,6 @@
 import { PasswordPolicyValidationCode, default as EncryptionManager } from './EncryptionManager.js';
 
-const authedPaths = ['/comments', '/comments/new'];
+const authedPaths = ['/comments', '/comments/new', '/profile'];
 
 const MAX_LOGIN_ATTEMPTS = 5;
 const LOCKOUT_DURATION_MINUTES = 15;
@@ -64,6 +64,8 @@ class AuthenticationManager {
         });
 
         this.app.post('/api/logout', async (req, res) => this.logout(req, res));
+
+        this.app.post('/api/change-password', async (req, res) => this.changePW(req, res));
     }
 
     setupAuthMiddleware() {
@@ -81,7 +83,8 @@ class AuthenticationManager {
             const session = await this.sessionManager.validateSession(sessionId);
             if (session) {
                 res.locals.user = {
-                    username: session.username,
+                    profile_letter: session.username.charAt(0).toUpperCase(),
+                    user_object: session,
                     sessionId: sessionId
                 };
             }
@@ -111,37 +114,25 @@ class AuthenticationManager {
         const { username, email, password } = req.body;
 
         const addUserQuery = `
-            INSERT INTO users (username, email, password_hash)
-            VALUES (?, ?, ?);
+            INSERT INTO users (username, email, password_hash, display_name)
+            VALUES (?, ?, ?, ?);
         `
+
+        const logAttemptQuery = `
+            INSERT INTO login_attempts (username, success, ip_address)
+            VALUES (?, ?, ?);
+        `;
 
         const passwordValidationCode = await EncryptionManager.validatePasswordPolicy(password);
         if (passwordValidationCode !== PasswordPolicyValidationCode.VALID) {
-            let message = 'Password does not meet the required policy.';
-            switch (passwordValidationCode) {
-                case PasswordPolicyValidationCode.TOO_SHORT:
-                    message = 'Password is too short.';
-                    break;
-                case PasswordPolicyValidationCode.MISSING_UPPERCASE:
-                    message = 'Password must contain at least one uppercase letter.';
-                    break;
-                case PasswordPolicyValidationCode.MISSING_LOWERCASE:
-                    message = 'Password must contain at least one lowercase letter.';
-                    break;
-                case PasswordPolicyValidationCode.MISSING_DIGIT:
-                    message = 'Password must contain at least one digit.';
-                    break;
-                case PasswordPolicyValidationCode.MISSING_SPECIAL_CHAR:
-                    message = 'Password must contain at least one special character.';
-                    break;
-            }
-            return { success: false, message: message };
+            return { success: false, message: passwordValidationCode };
         }
 
         const hashedPassword = await EncryptionManager.encryptPassword(password);
 
         try {
-            await this.db.execute(addUserQuery, [username, email, hashedPassword]);
+            await this.db.execute(addUserQuery, [username, email, hashedPassword, username]);
+            await this.db.execute(logAttemptQuery, [username, true, req.headers['x-real-ip']]); // Technically counts as a login
             return { success: true };
         } catch (error) {
             return { success: false, message: 'Username or email already exists' };
@@ -193,7 +184,6 @@ class AuthenticationManager {
 
         // First, check if in timeout
         if (new Date() < new Date(endTime.lockout_until)) {
-            console.log('Account locked until:', endTime.lockout_until);
             return { success: false, message: 'Account locked due to too many failed login attempts. Please try again later.' };
         }
 
@@ -204,6 +194,7 @@ class AuthenticationManager {
             if (user && await EncryptionManager.verifyPassword(user.password_hash, password)) {
                 // Good to login, log and reset failures if any
                 await this.db.execute(logAttemptQuery, [username, true, req.headers['x-real-ip']]);
+                await this.db.execute(setLockoutQuery, [null, username]);
                 await this.db.execute(resetLoginAttemptsQuery, [username]);
                 return { success: true, user: user };
             } else {
@@ -234,6 +225,55 @@ class AuthenticationManager {
             sameSite: 'lax'
         });
         res.redirect('/');
+    }
+
+    async changePW(req, res) {
+        const { current_password, new_password } = req.body;
+        const sessionId = req.cookies.session;
+        const session = await this.sessionManager.validateSession(sessionId);
+
+        if (!session) {
+            return res.render('profile', { error: 'No valid session', user: res.locals.user });
+        }
+
+        if (await this.validate(current_password, session.username) == true) {
+            const passwordValidationCode = await EncryptionManager.validatePasswordPolicy(new_password);
+            if (passwordValidationCode !== PasswordPolicyValidationCode.VALID) {
+                return res.render('profile', { error: passwordValidationCode, user: res.locals.user });
+            }
+
+            const hashedPassword = await EncryptionManager.encryptPassword(new_password);
+
+            const updatePasswordQuery = `
+                UPDATE users
+                SET password_hash = ?
+                WHERE username = ?;
+            `;
+
+            try {
+                await this.db.execute(updatePasswordQuery, [hashedPassword, session.username]);
+                await this.sessionManager.invalidateUserSessions(session.username);
+                return res.redirect('/login');
+            } catch (error) {
+                return res.render('profile', { error: 'Failed to change password', user: res.locals.user });
+            }
+        } else {
+            return res.render('profile', { error: 'Current password is incorrect', user: res.locals.user });
+        }
+    }
+
+    // Helpers
+    async validate(current_password, username) {
+        const getUserQuery = `
+            SELECT * FROM users WHERE username = ?;
+        `;
+
+        const user = await this.db.queryGet(getUserQuery, [username]);
+        if (user && await EncryptionManager.verifyPassword(user.password_hash, current_password)) {
+            return true;
+        } else {
+            return false;
+        }
     }
 
 }

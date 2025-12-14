@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Profile — Comment Corner</title>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <link rel="stylesheet" type="text/css" href="/styles/main.css">
+    <style>
+        /* Consistent styling with the rest of the site */
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial; background:#f7fafc; color:#1a202c; margin:0; padding-top: 10px; padding-left: 5px; padding-right: 5px; }
+        .wrap { max-width:900px; margin:0 auto; background:#fff; padding:2rem; border-radius:8px; box-shadow:0 8px 24px rgba(11,22,33,0.06); margin-top: 25px; }
+        header h1 { margin:0 0 0.25rem 0; font-size:1.6rem; }
+        header p.lead { margin:0 0 1rem 0; color:#4a5568; }
+        .profile-container { background:#f1f5f9; border-left:4px solid #2b6cb0; padding:1.5rem; border-radius:6px; margin:1rem 0; }
+        .profile-info { margin-bottom:1.5rem; }
+        .profile-info h2 { margin:0 0 1rem 0; font-size:1.1rem; }
+        .info-item { display:flex; margin-bottom:0.75rem; }
+        .info-label { font-weight:600; width:120px; color:#1a202c; }
+        .info-value { color:#4a5568; }
+        .actions { display:flex; gap:1rem; margin-top:1.5rem; padding-top:1rem; border-top:1px solid #e2e8f0; }
+        .btn { display:inline-block; text-decoration:none; padding:0.75rem 1.5rem; border-radius:6px; font-weight:600; border:none; cursor:pointer; font-size:1rem; }
+        .btn-primary { background:#2b6cb0; color:#fff; }
+        .btn-primary:hover { background:#2c5aa0; }
+        .btn-secondary { background:#edf2f7; color:#1a202c; text-decoration:none; }
+        .btn-secondary:hover { background:#e2e8f0; }
+        .info { margin-top:1.25rem; color:#4a5568; line-height:1.5; }
+        .avatar { width:80px; height:80px; background:#2b6cb0; border-radius:50%; display:flex; align-items:center; justify-content:center; color:#fff; font-size:2rem; font-weight:bold; margin-bottom:1rem; }
+    </style>
+</head>
+<body>
+    {{> nav}}
+
+    <main class="wrap">
+        <header>
+            <h1>User Profile</h1>
+            <p class="lead">View and manage your account information.</p>
+        </header>
+
+        {{#if error}}
+            <div class="error-message" style="background:#fee; border:1px solid #fcc; color:#c00; padding:0.75rem; border-radius:4px; margin-bottom:1rem; font-size:0.9rem;">
+                <strong>Error:</strong> {{error}}
+            </div>
+        {{/if}}
+
+        {{#if success}}
+            <div class="success-message" style="background:#efe; border:1px solid #cfc; color:#060; padding:0.75rem; border-radius:4px; margin-bottom:1rem; font-size:0.9rem;">
+                <strong>Success:</strong> {{success}}
+            </div>
+        {{/if}}
+
+        <section class="profile-container" aria-labelledby="profile-info">
+            <div class="avatar">{{user.profile_letter}}</div>
+            
+            <div class="profile-info">
+                <h2 id="profile-info">Account Information</h2>
+                
+                <div class="info-item">
+                    <span class="info-label">Username:</span>
+                    <span class="info-value">{{user.user_object.username}}</span>
+                </div>
+                
+                <div class="info-item">
+                    <span class="info-label">Display Name:</span>
+                    <span class="info-value">{{user.user_object.display_name}}</span>
+                </div>
+                
+                <div class="info-item">
+                    <span class="info-label">Email:</span>
+                    <span class="info-value">{{user.user_object.email}}</span>
+                </div>
+                
+                <div class="info-item">
+                    <span class="info-label">Member Since:</span>
+                    <span class="info-value">{{user.user_object.created_at}}</span>
+                </div>
+                
+            </div>
+
+            <div class="actions">
+                <button onclick="showEditForm()" class="btn btn-secondary" style="background:#2b6cb0; color:#fff;">Update Profile</button>
+                <button onclick="showPasswordForm()" class="btn btn-secondary" style="background:#dc2626; color:#fff;">Change Password</button>
+            </div>
+        </section>
+
+        {{!-- Edit Profile Form (initially hidden) --}}
+        <section class="profile-container" id="edit-form" style="display:none;" aria-labelledby="edit-profile">
+            <h2 id="edit-profile" style="margin:0 0 1rem 0; font-size:1.1rem;">Update Profile Information</h2>
+            
+            <form action="/api/profile/update" method="POST">
+                <div style="margin-bottom:1rem;">
+                    <label for="display_name" style="display:block; font-weight:600; margin-bottom:0.5rem; color:#1a202c;">Display Name:</label>
+                    <input id="display_name" name="display_name" type="text" value="{{user.user_object.display_name}}" style="width:100%; box-sizing:border-box; padding:0.75rem; border:1px solid #e2e8f0; border-radius:4px; font-size:1rem;">
+                </div>
+                
+                <div style="margin-bottom:1rem;">
+                    <label for="email" style="display:block; font-weight:600; margin-bottom:0.5rem; color:#1a202c;">Email:</label>
+                    <input id="email" name="email" type="email" value="{{user.user_object.email}}" required style="width:100%; box-sizing:border-box; padding:0.75rem; border:1px solid #e2e8f0; border-radius:4px; font-size:1rem;">
+                </div>
+                
+                <div style="margin-bottom:1rem; padding:1rem; background:#fef5e7; border:1px solid #f6e05e; border-radius:4px;">
+                    <label for="confirm_password_profile" style="display:block; font-weight:600; margin-bottom:0.5rem; color:#744210;">Confirm Current Password:</label>
+                    <input id="confirm_password_profile" name="current_password" type="password" placeholder="Enter your current password to confirm changes" required style="width:100%; box-sizing:border-box; padding:0.75rem; border:1px solid #e2e8f0; border-radius:4px; font-size:1rem;">
+                    <p style="margin:0.5rem 0 0 0; font-size:0.85rem; color:#8b5a2b;">For security, please confirm your password before updating your profile.</p>
+                </div>
+                
+                <div style="display:flex; gap:1rem; padding-top:1rem; border-top:1px solid #e2e8f0;">
+                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                    <button type="button" onclick="hideEditForm()" class="btn btn-secondary">Cancel</button>
+                </div>
+            </form>
+        </section>
+
+        {{!-- Change Password Form (initially hidden) --}}
+        <section class="profile-container" id="password-form" style="display:none;" aria-labelledby="change-password">
+            <h2 id="change-password" style="margin:0 0 1rem 0; font-size:1.1rem;">Change Password</h2>
+            
+            <form action="/api/change-password" method="POST">
+                <div style="margin-bottom:0.75rem;">
+                    <label for="current_password" style="display:block; font-weight:600; margin-bottom:0.5rem; color:#1a202c;">Current Password:</label>
+                    <input id="current_password" name="current_password" type="password" placeholder="Enter your current password" required style="width:100%; box-sizing:border-box; padding:0.75rem; border:1px solid #e2e8f0; border-radius:4px; font-size:1rem;">
+                </div>
+                
+                <div style="margin-bottom:0.75rem;">
+                    <label for="new_password" style="display:block; font-weight:600; margin-bottom:0.5rem; color:#1a202c;">New Password:</label>
+                    <input id="new_password" name="new_password" type="password" placeholder="Enter your new password" required style="width:100%; box-sizing:border-box; padding:0.75rem; border:1px solid #e2e8f0; border-radius:4px; font-size:1rem;">
+                </div>
+                
+                <div style="display:flex; gap:1rem; padding-top:1rem; border-top:1px solid #e2e8f0;">
+                    <button type="submit" class="btn btn-primary">Update Password</button>
+                    <button type="button" onclick="hidePasswordForm()" class="btn btn-secondary">Cancel</button>
+                </div>
+            </form>
+        </section>
+    </main>
+
+    <script>
+        function showEditForm() {
+            document.getElementById('edit-form').style.display = 'block';
+            document.getElementById('password-form').style.display = 'none';
+            document.querySelector('.profile-container:first-of-type').style.display = 'none';
+        }
+        
+        function hideEditForm() {
+            document.getElementById('edit-form').style.display = 'none';
+            document.querySelector('.profile-container:first-of-type').style.display = 'block';
+        }
+        
+        function showPasswordForm() {
+            document.getElementById('password-form').style.display = 'block';
+            document.getElementById('edit-form').style.display = 'none';
+            document.querySelector('.profile-container:first-of-type').style.display = 'none';
+        }
+        
+        function hidePasswordForm() {
+            document.getElementById('password-form').style.display = 'none';
+            document.querySelector('.profile-container:first-of-type').style.display = 'block';
+        }
+    </script>
+
+    {{> footer}}
+</body>
+</html>

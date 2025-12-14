@@ -7,7 +7,7 @@
     <div style="margin-left:auto; display:flex; gap:0.75rem; align-items:center;">
         {{#if user}}
             {{!-- Signed in user buttons --}}
-            <span style="color:#4a5568; font-size:0.9rem; margin-right:0.5rem;">Welcome, {{user.username}}!</span>
+            <a href="/profile" style="text-decoration:none; background:#f8fafc; color:#1a202c; padding:0.6rem 1rem; border-radius:6px; font-weight:600; border:1px solid #e2e8f0; transition:background 0.2s;">Welcome, {{user.user_object.display_name}}!</a>
             <a href="/comments/new" style="text-decoration:none; background:#2b6cb0; color:#fff; padding:0.6rem 1rem; border-radius:6px; font-weight:600;">New Comment</a>
             <form action="/api/logout" method="post" style="display:inline;">
                 <button type="submit" style="text-decoration:none; background:#edf2f7; color:#1a202c; padding:0.6rem 1rem; border-radius:6px; font-weight:600; border:none; cursor:pointer; font-family: inherit;font-size: 16px;">Sign Out</button>
