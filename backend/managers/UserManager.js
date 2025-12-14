@@ -16,7 +16,7 @@ class UserManager {
     }
 
     async updateProfile(req, res) {
-        const { display_name, email, current_password } = req.body;
+        const { display_name, email, current_password, avatar_color } = req.body;
         const sessionId = req.cookies.session;
 
         const session = await this.sessionManager.validateSession(sessionId);
@@ -35,12 +35,12 @@ class UserManager {
 
         const updateProfileQuery = `
             UPDATE users
-            SET display_name = ?, email = ?
+            SET display_name = ?, email = ?, profile_color = ?
             WHERE username = ?
         `;
 
         try {
-            await this.db.execute(updateProfileQuery, [display_name, email, session.username]);
+            await this.db.execute(updateProfileQuery, [display_name, email, avatar_color, session.username]);
             return res.redirect('/profile');
         } catch (error) {
             return res.render('profile', { error: 'Failed to update profile.', user: res.locals.user });

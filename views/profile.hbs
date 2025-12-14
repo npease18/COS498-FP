@@ -25,7 +25,7 @@
         .btn-secondary { background:#edf2f7; color:#1a202c; text-decoration:none; }
         .btn-secondary:hover { background:#e2e8f0; }
         .info { margin-top:1.25rem; color:#4a5568; line-height:1.5; }
-        .avatar { width:80px; height:80px; background:#2b6cb0; border-radius:50%; display:flex; align-items:center; justify-content:center; color:#fff; font-size:2rem; font-weight:bold; margin-bottom:1rem; }
+        .avatar { width:80px; height:80px; background:{{#if user.user_object.avatar_color}}{{user.user_object.avatar_color}}{{else}}#2b6cb0{{/if}}; border-radius:50%; display:flex; align-items:center; justify-content:center; color:#fff; font-size:2rem; font-weight:bold; margin-bottom:1rem; }
     </style>
 </head>
 <body>
@@ -50,7 +50,7 @@
         {{/if}}
 
         <section class="profile-container" aria-labelledby="profile-info">
-            <div class="avatar">{{user.profile_letter}}</div>
+            <div class="avatar" style="background: {{user.user_object.profile_color}};">{{user.profile_letter}}</div>
             
             <div class="profile-info">
                 <h2 id="profile-info">Account Information</h2>
@@ -96,6 +96,15 @@
                 <div style="margin-bottom:1rem;">
                     <label for="email" style="display:block; font-weight:600; margin-bottom:0.5rem; color:#1a202c;">Email:</label>
                     <input id="email" name="email" type="email" value="{{user.user_object.email}}" required style="width:100%; box-sizing:border-box; padding:0.75rem; border:1px solid #e2e8f0; border-radius:4px; font-size:1rem;">
+                </div>
+                
+                <div style="margin-bottom:1rem;">
+                    <label for="avatar_color" style="display:block; font-weight:600; margin-bottom:0.5rem; color:#1a202c;">Avatar Color:</label>
+                    <div style="display:flex; align-items:center; gap:1rem;">
+                        <input id="avatar_color" name="avatar_color" type="color" value="{{user.user_object.profile_color}}" style="width:60px; height:40px; border:1px solid #e2e8f0; border-radius:4px; cursor:pointer;" onchange="updateAvatarPreview(this.value)">
+                        <div id="avatar-preview" style="width:40px; height:40px; background:{{user.user_object.profile_color}}; border-radius:50%; display:flex; align-items:center; justify-content:center; color:#fff; font-weight:bold; font-size:1.2rem;">{{user.profile_letter}}</div>
+                        <span style="color:#4a5568; font-size:0.9rem;">Preview</span>
+                    </div>
                 </div>
                 
                 <div style="margin-bottom:1rem; padding:1rem; background:#fef5e7; border:1px solid #f6e05e; border-radius:4px;">
@@ -155,6 +164,13 @@
         function hidePasswordForm() {
             document.getElementById('password-form').style.display = 'none';
             document.querySelector('.profile-container:first-of-type').style.display = 'block';
+        }
+        
+        function updateAvatarPreview(color) {
+            const preview = document.getElementById('avatar-preview');
+            if (preview) {
+                preview.style.backgroundColor = color;
+            }
         }
     </script>
 

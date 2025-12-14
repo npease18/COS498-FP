@@ -6,6 +6,7 @@ CREATE TABLE users (
     display_name                    CHAR(100),
     lockout_until                   TIMESTAMP,
     created_at                      TIMESTAMP   DEFAULT CURRENT_TIMESTAMP,
+    profile_color                   CHAR(7)     DEFAULT '#2b6cb0',
     login_attempts_since_successful INTEGER     DEFAULT 0
 );
 
