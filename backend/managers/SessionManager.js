@@ -1,3 +1,5 @@
+import EncryptionManager from "./EncryptionManager.js";
+
 class SessionManager {
     constructor(app, db) {
         this.app = app;
@@ -6,7 +8,7 @@ class SessionManager {
 
     // Helper Functions
     addSession(username) {
-        let sessionId = `session-${Date.now()}-${Math.random()}`;
+        let sessionId = `session-${EncryptionManager.generateRandomToken(16)}`;
 
         const sessionCreateQuery = `
             INSERT INTO sessions (session_id, username)

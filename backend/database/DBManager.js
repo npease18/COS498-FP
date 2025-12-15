@@ -3,9 +3,9 @@ import fs from 'fs';
 
 class DBManager {
     constructor() {
-        let db_setup = fs.existsSync("db.sqlite");
+        let db_setup = fs.existsSync("database/db.sqlite");
 
-        this.db = new sqlite3.Database('db.sqlite');
+        this.db = new sqlite3.Database('database/db.sqlite');
         if (!db_setup) {
             this.createNewDB();
         }

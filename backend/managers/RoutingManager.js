@@ -22,7 +22,8 @@ class RoutingManager {
         });
 
         this.app.get('/login', (req, res) => {
-            res.render('login');
+            const resetSuccess = req.query.reset === 'success';
+            res.render('login', { resetSuccess });
         });
 
         this.app.get('/register', (req, res) => {
@@ -39,6 +40,24 @@ class RoutingManager {
 
         this.app.get('/comments/new', (req, res) => {
             res.render('new-comment');
+        });
+
+        this.app.get('/forgot-password', (req, res) => {
+            res.render('forgot-password');
+        });
+
+        this.app.get('/reset-password', (req, res) => {
+            const token = req.query.token;
+            if (!token) {
+                return res.render('reset-password', { 
+                    validToken: false, 
+                    error: 'No reset token provided' 
+                });
+            }
+            res.render('reset-password', { 
+                validToken: true, 
+                token: token 
+            });
         });
     }
 

@@ -1,4 +1,5 @@
 import argon2 from 'argon2';
+import crypto from 'crypto';
 
 export const PasswordPolicyValidationCode = {
     VALID: "OK",
@@ -54,6 +55,10 @@ class EncryptionManager {
         } catch (err) {
             return false;
         }
+    }
+
+    static generateRandomToken(length = 32) {
+        return crypto.randomBytes(length).toString('hex');
     }
 }
 

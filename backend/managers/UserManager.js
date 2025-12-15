@@ -1,3 +1,5 @@
+import EmailManager from "../email/EmailManager.js";
+
 const DISPLAY_NAME_MAX_LENGTH = 20;
 
 class UserManager {
@@ -7,6 +9,7 @@ class UserManager {
         this.db = db;
         this.sessionManager = sm;
         this.authManager = am;
+        this.emailManager = new EmailManager();
         
         this.setupUserAPIs()
     }
@@ -39,13 +42,27 @@ class UserManager {
             WHERE username = ?
         `;
 
-        try {
-            await this.db.execute(updateProfileQuery, [display_name, email, avatar_color, session.username]);
-            return res.redirect('/profile');
-        } catch (error) {
-            return res.render('profile', { error: 'Failed to update profile.', user: res.locals.user });
+        await this.db.execute(updateProfileQuery, [display_name, email, avatar_color, session.username]);
+        
+        // Check if email was updated
+        if (email && email !== session.email) {
+            await this.sendConfirmationEmail(session.username, email);
         }
+
+        return res.redirect('/profile');
     }
+
+    sendConfirmationEmail = async (username, newEmail) => {
+        const subject = "Confirmation of Email Address Change";
+        const emailContent = `
+            <p>Dear ${username},</p>
+            <p>Your email address has been updated to ${newEmail}.</p>
+            <p>Best regards,<br/>Comment Corner Team</p>
+        `;
+
+        return await this.emailManager.sendEmail(newEmail, subject, emailContent);
+    }
+
 }
 
 export default UserManager;

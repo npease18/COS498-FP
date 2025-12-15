@@ -25,6 +25,8 @@
     .form-footer a { color:#2b6cb0; text-decoration:none; font-weight:600; }
     .form-footer a:hover { text-decoration:underline; }
     .info { margin-top:1.25rem; color:#4a5568; line-height:1.5; }
+    .password-requirements { background:#f8f9fa; border:1px solid #e9ecef; padding:0.75rem; border-radius:4px; margin-top:0.5rem; font-size:0.85rem; }
+    .password-requirements ul { margin:0.5rem 0; padding-left:1.5rem; }
   </style>
 </head>
 <body>
@@ -59,6 +61,16 @@
         <div class="form-group">
           <label for="password">Password</label>
           <input id="password" name="password" type="password" required placeholder="Create a secure password">
+          <div class="password-requirements">
+            <strong>Password requirements:</strong>
+            <ul>
+              <li>At least 8 characters long</li>
+              <li>At least one uppercase letter</li>
+              <li>At least one lowercase letter</li>
+              <li>At least one number</li>
+              <li>At least one special character (!@#$%^&*)</li>
+            </ul>
+          </div>
         </div>
 
         <button type="submit" class="btn btn-primary">Create Account</button>

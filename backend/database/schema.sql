@@ -30,3 +30,10 @@ CREATE TABLE sessions (
     username                        CHAR(50)    REFERENCES users(username) ON DELETE CASCADE,
     created_at                      TIMESTAMP   DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE TABLE password_resets (
+    username                        CHAR(50)    REFERENCES users(username) ON DELETE CASCADE,
+    reset_token                     CHAR(100)   UNIQUE NOT NULL,
+    expires_at                      TIMESTAMP   NOT NULL,
+    PRIMARY KEY (username, reset_token)
+);

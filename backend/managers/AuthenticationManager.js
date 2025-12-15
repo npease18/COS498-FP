@@ -1,4 +1,5 @@
 import { PasswordPolicyValidationCode, default as EncryptionManager } from './EncryptionManager.js';
+import EmailManager from '../email/EmailManager.js';
 
 const authedPaths = ['/comments', '/comments/new', '/profile'];
 
@@ -10,6 +11,7 @@ class AuthenticationManager {
         this.app = app;
         this.sessionManager = sm;
         this.db = db;
+        this.emailManager = new EmailManager();
 
         this.setupAuthMiddleware();
         this.setupAuthAPIs();
@@ -20,9 +22,9 @@ class AuthenticationManager {
         // API Routes
         this.app.post('/api/register', async (req, res) => {
             const { username, email, password } = req.body;
-            
+
             const result = await this.registerUser(req, res);
-            
+
             if (result.success) {
                 res.cookie('session', this.sessionManager.addSession(username), {
                     httpOnly: true,
@@ -32,7 +34,7 @@ class AuthenticationManager {
                 });
                 res.redirect('/comments');
             } else {
-                return res.render('register', { 
+                return res.render('register', {
                     error: result.message,
                     username: username,
                     email: email
@@ -42,9 +44,9 @@ class AuthenticationManager {
 
         this.app.post('/api/login', async (req, res) => {
             const { username, password } = req.body;
-            
+
             const result = await this.login(req, res);
-            
+
             if (result.success) {
                 // Set session cookie and redirect on success
                 res.cookie('session', this.sessionManager.addSession(username), {
@@ -56,7 +58,7 @@ class AuthenticationManager {
                 res.redirect('/comments');
             } else {
                 // Render login page with error on failure
-                return res.render('login', { 
+                return res.render('login', {
                     error: result.message,
                     username: username
                 });
@@ -66,11 +68,16 @@ class AuthenticationManager {
         this.app.post('/api/logout', async (req, res) => this.logout(req, res));
 
         this.app.post('/api/change-password', async (req, res) => this.changePW(req, res));
+
+        this.app.post('/api/forgot-password', async (req, res) => this.forgotPassword(req, res));
+
+        this.app.post('/api/reset-password', async (req, res) => this.resetPassword(req, res));
     }
 
     setupAuthMiddleware() {
         this.app.use(this.addUserToContext);
         this.app.use(this.requireAuth);
+        this.app.use(this.newPasswordTokenCheck);
     }
 
     // Middleware
@@ -78,7 +85,7 @@ class AuthenticationManager {
     // Insert User Data into res.locals
     addUserToContext = async (req, res, next) => {
         const sessionId = req.cookies.session;
-        
+
         if (sessionId) {
             const session = await this.sessionManager.validateSession(sessionId);
             if (session) {
@@ -89,7 +96,7 @@ class AuthenticationManager {
                 };
             }
         }
-        
+
         next();
     }
 
@@ -101,11 +108,44 @@ class AuthenticationManager {
             next();
             return;
         }
-        
+
         if (sessionId && await this.sessionManager.validateSession(sessionId)) {
             next();
         } else {
             res.redirect('/login');
+        }
+    }
+
+    // Validate Reset Password Token Exists / Valid
+    newPasswordTokenCheck = async (req, res, next) => {
+        if (req.path === '/reset-password') {
+            const { token } = req.query;
+
+            if (!token) {
+                return res.render('reset-password', {
+                    validToken: false,
+                    error: 'Invalid reset token'
+                });
+            }
+
+            const getResetTokenQuery = `
+                SELECT pr.username, pr.expires_at, pr.used 
+                FROM password_resets pr
+                WHERE pr.reset_token = ?;
+            `;
+
+            const resetRecord = await this.db.queryGet(getResetTokenQuery, [token]);
+
+            if (!resetRecord || resetRecord.used || new Date() > new Date(resetRecord.expires_at)) {
+                return res.render('reset-password', {
+                    validToken: false,
+                    error: 'Invalid or expired reset token'
+                });
+            } else {
+                next();
+            }
+        } else {
+            next();
         }
     }
 
@@ -179,6 +219,11 @@ class AuthenticationManager {
             WHERE username = ?;
         `;
 
+        const removeAllPasswordResetsQuery = `
+            DELETE FROM password_resets
+            WHERE username = ?;
+        `;
+
         const login_attempts = await this.db.queryGet(getLoginAttemptsQuery, [username]);
         const endTime = await this.db.queryGet(getTimeRemainingQuery, [username]);
 
@@ -188,29 +233,24 @@ class AuthenticationManager {
         }
 
         // Not in timeout, proceed with login
-
-        try {
-            const user = await this.db.queryGet(getUserQuery, [username]);
-            if (user && await EncryptionManager.verifyPassword(user.password_hash, password)) {
-                // Good to login, log and reset failures if any
-                await this.db.execute(logAttemptQuery, [username, true, req.headers['x-real-ip']]);
-                await this.db.execute(setLockoutQuery, [null, username]);
-                await this.db.execute(resetLoginAttemptsQuery, [username]);
-                return { success: true, user: user };
-            } else {
-                // Not good, log failure and increment attempts
-                await this.db.execute(logAttemptQuery, [username, false, req.headers['x-real-ip']]);
-                await this.db.execute(setUserLoginAttemptsQuery, [username]);
-                if (login_attempts.login_attempts_since_successful + 1 >= MAX_LOGIN_ATTEMPTS) {
-                    const lockoutUntil = new Date();
-                    lockoutUntil.setMinutes(lockoutUntil.getMinutes() + LOCKOUT_DURATION_MINUTES);
-                    await this.db.execute(setLockoutQuery, [lockoutUntil.toISOString(), username]);
-                }
-                return { success: false, message: 'Invalid username or password' };
+        const user = await this.db.queryGet(getUserQuery, [username]);
+        if (user && await EncryptionManager.verifyPassword(user.password_hash, password)) {
+            // Good to login, log and reset failures if any
+            await this.db.execute(logAttemptQuery, [username, true, req.headers['x-real-ip']]);
+            await this.db.execute(setLockoutQuery, [null, username]);
+            await this.db.execute(resetLoginAttemptsQuery, [username]);
+            await this.db.execute(removeAllPasswordResetsQuery, [username]);
+            return { success: true, user: user };
+        } else {
+            // Not good, log failure and increment attempts
+            await this.db.execute(logAttemptQuery, [username, false, req.headers['x-real-ip']]);
+            await this.db.execute(setUserLoginAttemptsQuery, [username]);
+            if (login_attempts.login_attempts_since_successful + 1 >= MAX_LOGIN_ATTEMPTS) {
+                const lockoutUntil = new Date();
+                lockoutUntil.setMinutes(lockoutUntil.getMinutes() + LOCKOUT_DURATION_MINUTES);
+                await this.db.execute(setLockoutQuery, [lockoutUntil.toISOString(), username]);
             }
-        } catch (error) {
-            console.error('Database error during login:', error);
-            return { success: false, message: 'An error occurred during login' };
+            return { success: false, message: 'Invalid username or password' };
         }
     }
 
@@ -260,6 +300,147 @@ class AuthenticationManager {
         } else {
             return res.render('profile', { error: 'Current password is incorrect', user: res.locals.user });
         }
+    }
+
+    forgotPassword = async (req, res) => {
+        const { email } = req.body;
+
+        const getUserByEmailQuery = `
+            SELECT username, email, display_name FROM users WHERE email = ?;
+        `;
+
+        // TODO: CLEAR OUT UNUSED ONES IF EXPIRED, or if logged in successfully
+        const checkExistingResetQuery = `
+            SELECT reset_token FROM password_resets 
+            WHERE username = ? AND expires_at > datetime('now') AND used = FALSE;
+        `;
+
+        const insertResetTokenQuery = `
+            INSERT INTO password_resets (username, reset_token, expires_at)
+            VALUES (?, ?, ?);
+        `;
+
+        const resettingUser = await this.db.queryGet(getUserByEmailQuery, [email]);
+
+        if (!resettingUser) {
+            // Immediately return success
+            return res.render('forgot-password', {
+                success: 'If an account with that email exists, a password reset link is on the way',
+                email: email
+            });
+        }
+
+        // Check for existing reset token
+        const existingReset = await this.db.queryGet(checkExistingResetQuery, [resettingUser.username]);
+        if (existingReset) {
+            return res.render('forgot-password', {
+                success: 'A password reset link has already been sent to your email. Please check your inbox.',
+                email: email
+            });
+        }
+
+        const resetToken = EncryptionManager.generateRandomToken(16);
+        const expiresAt = new Date().setHours(new Date().getHours() + 1); // Expires in 1 hour
+
+        await this.db.execute(insertResetTokenQuery, [resettingUser.username, resetToken, expiresAt.toString()]);
+
+        // Build the email
+        const emailText = `
+            Hello ${resettingUser.display_name} (@${resettingUser.username}),<br/><br/>
+            Here is your requested password reset link:<br/>
+            <a href="http://sswd.lax18.dev/reset-password?token=${resetToken}">Reset Password</a><br/>
+            <br/>
+            This link will expire in 1 hour. If you did not request this, please ignore this email.<br/>
+            <br/>
+            Best,
+            Comment Corner Team
+        `
+
+        await this.emailManager.sendEmail(resettingUser.email, "Password Reset", emailText);
+
+        return res.render('forgot-password', {
+            success: 'A password reset link has already been sent to your email. Please check your inbox.',
+            email: email
+        });
+    }
+
+    async resetPassword(req, res) {
+        const { token, password, confirmPassword } = req.body;
+
+        if (!token) {
+            return res.render('reset-password', {
+                validToken: false,
+                error: 'Invalid reset token'
+            });
+        }
+
+        if (password !== confirmPassword) {
+            return res.render('reset-password', {
+                validToken: true,
+                token: token,
+                error: 'Passwords do not match'
+            });
+        }
+
+        const getResetTokenQuery = `
+            SELECT pr.username, pr.expires_at, pr.used 
+            FROM password_resets pr
+            WHERE pr.reset_token = ?;
+        `;
+
+        const updatePasswordQuery = `
+            UPDATE users
+            SET password_hash = ?
+            WHERE username = ?;
+        `;
+
+        const deleteResetTokenQuery = `
+            DELETE FROM password_resets
+            WHERE username = ?;
+        `;
+
+        // Validate token
+        const resetRecord = await this.db.queryGet(getResetTokenQuery, [token]);
+
+        if (!resetRecord) {
+            return res.render('reset-password', {
+                validToken: false,
+                error: 'Invalid or expired reset token'
+            });
+        }
+
+        // Really should not occur... but checking it anyway
+        if (new Date() > new Date(resetRecord.expires_at)) {
+            return res.render('reset-password', {
+                validToken: false,
+                error: 'This reset link has expired'
+            });
+        }
+
+        // Validate password policy
+        const passwordValidationCode = await EncryptionManager.validatePasswordPolicy(password);
+        if (passwordValidationCode !== PasswordPolicyValidationCode.VALID) {
+            return res.render('reset-password', {
+                validToken: true,
+                token: token,
+                error: passwordValidationCode
+            });
+        }
+
+        // Hash new password
+        const hashedPassword = await EncryptionManager.encryptPassword(password);
+
+        // Update password
+        await this.db.execute(updatePasswordQuery, [hashedPassword, resetRecord.username]);
+
+        // Invalidate all existing sessions for this user
+        await this.sessionManager.invalidateUserSessions(resetRecord.username);
+
+        // Delete all reset tokens for this user
+        await this.db.execute(deleteResetTokenQuery, [resetRecord.username]);
+
+        // Redirect to login with success message
+        res.redirect('/login?reset=success');
     }
 
     // Helpers
