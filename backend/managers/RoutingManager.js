@@ -42,6 +42,10 @@ class RoutingManager {
             res.render('new-comment');
         });
 
+        this.app.get('/chat', (req, res) => {
+            res.render('chat');
+        });
+
         this.app.get('/forgot-password', (req, res) => {
             res.render('forgot-password');
         });
@@ -66,7 +70,7 @@ class RoutingManager {
         this.app.use(express.urlencoded({ extended: true }));
         this.app.use(cookieParser()); 
 
-        this.app.use(express.static('public'));
+        this.app.use(express.static('../public'));
     }
 
     setupHandlebars() {

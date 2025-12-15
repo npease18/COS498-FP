@@ -46,7 +46,7 @@ class CommentManager {
         }
 
         const getCommentsQuery = `
-            SELECT users.display_name, users.profile_color, content, comments.created_at
+            SELECT users.display_name, users.avatarColor, content, comments.created_at
             FROM comments
             LEFT JOIN users ON comments.username = users.username
             ORDER BY comments.created_at DESC
@@ -54,7 +54,7 @@ class CommentManager {
 
         try {
             const comments = await this.db.queryAll(getCommentsQuery);
-            res.locals.comments = comments.map(c => new Comment(c.display_name, c.content, c.created_at, c.profile_color));
+            res.locals.comments = comments.map(c => new Comment(c.display_name, c.content, c.created_at, c.avatarColor));
             next();
         } catch (error) {
             next(error);

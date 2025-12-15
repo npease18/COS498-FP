@@ -1,7 +1,7 @@
 import { PasswordPolicyValidationCode, default as EncryptionManager } from './EncryptionManager.js';
 import EmailManager from '../email/EmailManager.js';
 
-const authedPaths = ['/comments', '/comments/new', '/profile'];
+const authedPaths = ['/comments', '/comments/new', '/profile', '/chat'];
 
 const MAX_LOGIN_ATTEMPTS = 5;
 const LOCKOUT_DURATION_MINUTES = 15;

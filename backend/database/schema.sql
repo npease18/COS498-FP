@@ -6,7 +6,7 @@ CREATE TABLE users (
     display_name                    CHAR(100),
     lockout_until                   TIMESTAMP,
     created_at                      TIMESTAMP   DEFAULT CURRENT_TIMESTAMP,
-    profile_color                   CHAR(7)     DEFAULT '#2b6cb0',
+    avatarColor                     CHAR(7)     DEFAULT '#2b6cb0',
     login_attempts_since_successful INTEGER     DEFAULT 0
 );
 
@@ -37,3 +37,10 @@ CREATE TABLE password_resets (
     expires_at                      TIMESTAMP   NOT NULL,
     PRIMARY KEY (username, reset_token)
 );
+
+CREATE TABLE chats (
+    chat_id                         INTEGER     PRIMARY KEY AUTOINCREMENT,
+    username                        CHAR(50)    REFERENCES users(username) ON DELETE CASCADE,
+    content                         CHAR(50)    NOT NULL,
+    created_at                      TIMESTAMP   DEFAULT CURRENT_TIMESTAMP
+)

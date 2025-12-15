@@ -38,7 +38,7 @@ class UserManager {
 
         const updateProfileQuery = `
             UPDATE users
-            SET display_name = ?, email = ?, profile_color = ?
+            SET display_name = ?, email = ?, avatarColor = ?
             WHERE username = ?
         `;
 
