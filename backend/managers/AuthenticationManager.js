@@ -1,5 +1,6 @@
 import { PasswordPolicyValidationCode, default as EncryptionManager } from './EncryptionManager.js';
 import EmailManager from '../email/EmailManager.js';
+import SharedDatabaseQueries from "../database/SharedDatabaseQueries.js";
 
 const authedPaths = ['/comments', '/comments/new', '/profile', '/chat'];
 
@@ -75,14 +76,15 @@ class AuthenticationManager {
     }
 
     setupAuthMiddleware() {
-        this.app.use(this.addUserToContext);
         this.app.use(this.requireAuth);
+        this.app.use(this.addUserToContext);
         this.app.use(this.newPasswordTokenCheck);
     }
 
     // Middleware
 
     // Insert User Data into res.locals
+    // todo: move to user manager
     addUserToContext = async (req, res, next) => {
         const sessionId = req.cookies.session;
 
@@ -128,13 +130,7 @@ class AuthenticationManager {
                 });
             }
 
-            const getResetTokenQuery = `
-                SELECT pr.username, pr.expires_at, pr.used 
-                FROM password_resets pr
-                WHERE pr.reset_token = ?;
-            `;
-
-            const resetRecord = await this.db.queryGet(getResetTokenQuery, [token]);
+            const resetRecord = await this.db.queryGet(SharedDatabaseQueries.PasswordReset.getPasswordResetQueryByToken, [token]);
 
             if (!resetRecord || resetRecord.used || new Date() > new Date(resetRecord.expires_at)) {
                 return res.render('reset-password', {
@@ -153,16 +149,6 @@ class AuthenticationManager {
     async registerUser(req, res) {
         const { username, email, password } = req.body;
 
-        const addUserQuery = `
-            INSERT INTO users (username, email, password_hash, display_name)
-            VALUES (?, ?, ?, ?);
-        `
-
-        const logAttemptQuery = `
-            INSERT INTO login_attempts (username, success, ip_address)
-            VALUES (?, ?, ?);
-        `;
-
         const passwordValidationCode = await EncryptionManager.validatePasswordPolicy(password);
         if (passwordValidationCode !== PasswordPolicyValidationCode.VALID) {
             return { success: false, message: passwordValidationCode };
@@ -171,8 +157,8 @@ class AuthenticationManager {
         const hashedPassword = await EncryptionManager.encryptPassword(password);
 
         try {
-            await this.db.execute(addUserQuery, [username, email, hashedPassword, username]);
-            await this.db.execute(logAttemptQuery, [username, true, req.headers['x-real-ip']]); // Technically counts as a login
+            await this.db.execute(SharedDatabaseQueries.User.addUserQuery, [username, email, hashedPassword, username]);
+            await this.db.execute(SharedDatabaseQueries.LoginAttempts.addLoginAttemptQuery, [username, true, req.headers['x-real-ip']]); // Technically counts as a login
             return { success: true };
         } catch (error) {
             return { success: false, message: 'Username or email already exists' };
@@ -182,50 +168,8 @@ class AuthenticationManager {
     async login(req, res) {
         const { username, password } = req.body;
 
-        const getUserQuery = `
-            SELECT * FROM users WHERE username = ?;
-        `;
-
-        const logAttemptQuery = `
-            INSERT INTO login_attempts (username, success, ip_address)
-            VALUES (?, ?, ?);
-        `;
-
-        const getLoginAttemptsQuery = `
-            SELECT login_attempts_since_successful FROM users
-            WHERE username = ?;
-        `;
-
-        const resetLoginAttemptsQuery = `
-            UPDATE users
-            SET login_attempts_since_successful = 0
-            WHERE username = ?;
-        `;
-
-        const setLockoutQuery = `
-            UPDATE users
-            SET lockout_until = ?
-            WHERE username = ?;
-        `;
-
-        const getTimeRemainingQuery = `
-            SELECT lockout_until FROM users
-            WHERE username = ?;
-        `;
-
-        const setUserLoginAttemptsQuery = `
-            UPDATE users
-            SET login_attempts_since_successful = login_attempts_since_successful + 1
-            WHERE username = ?;
-        `;
-
-        const removeAllPasswordResetsQuery = `
-            DELETE FROM password_resets
-            WHERE username = ?;
-        `;
-
-        const login_attempts = await this.db.queryGet(getLoginAttemptsQuery, [username]);
-        const endTime = await this.db.queryGet(getTimeRemainingQuery, [username]);
+        const login_attempts = await this.db.queryGet(SharedDatabaseQueries.LoginAttempts.getLoginAttemptsQuery, [username]);
+        const endTime = await this.db.queryGet(SharedDatabaseQueries.LoginAttempts.getLockoutTimeRemainingQuery, [username]);
 
         // First, check if in timeout
         if (new Date() < new Date(endTime.lockout_until)) {
@@ -233,22 +177,22 @@ class AuthenticationManager {
         }
 
         // Not in timeout, proceed with login
-        const user = await this.db.queryGet(getUserQuery, [username]);
+        const user = await this.db.queryGet(SharedDatabaseQueries.User.getUserByUsernameQuery, [username]);
         if (user && await EncryptionManager.verifyPassword(user.password_hash, password)) {
             // Good to login, log and reset failures if any
-            await this.db.execute(logAttemptQuery, [username, true, req.headers['x-real-ip']]);
-            await this.db.execute(setLockoutQuery, [null, username]);
-            await this.db.execute(resetLoginAttemptsQuery, [username]);
-            await this.db.execute(removeAllPasswordResetsQuery, [username]);
+            await this.db.execute(SharedDatabaseQueries.LoginAttempts.addLoginAttemptQuery, [username, true, req.headers['x-real-ip']]);
+            await this.db.execute(SharedDatabaseQueries.LoginAttempts.setLockoutQuery, [null, username]);
+            await this.db.execute(SharedDatabaseQueries.LoginAttempts.resetLoginAttemptsQuery, [username]);
+            await this.db.execute(SharedDatabaseQueries.removeAllPasswordResetsQuery, [username]);
             return { success: true, user: user };
         } else {
             // Not good, log failure and increment attempts
-            await this.db.execute(logAttemptQuery, [username, false, req.headers['x-real-ip']]);
-            await this.db.execute(setUserLoginAttemptsQuery, [username]);
+            await this.db.execute(SharedDatabaseQueries.LoginAttempts.addLoginAttemptQuery, [username, false, req.headers['x-real-ip']]);
+            await this.db.execute(SharedDatabaseQueries.LoginAttempts.incrementUserLoginAttemptsQuery, [username]);
             if (login_attempts.login_attempts_since_successful + 1 >= MAX_LOGIN_ATTEMPTS) {
                 const lockoutUntil = new Date();
                 lockoutUntil.setMinutes(lockoutUntil.getMinutes() + LOCKOUT_DURATION_MINUTES);
-                await this.db.execute(setLockoutQuery, [lockoutUntil.toISOString(), username]);
+                await this.db.execute(SharedDatabaseQueries.LoginAttempts.setLockoutQuery, [lockoutUntil.toISOString(), username]);
             }
             return { success: false, message: 'Invalid username or password' };
         }
@@ -284,14 +228,8 @@ class AuthenticationManager {
 
             const hashedPassword = await EncryptionManager.encryptPassword(new_password);
 
-            const updatePasswordQuery = `
-                UPDATE users
-                SET password_hash = ?
-                WHERE username = ?;
-            `;
-
             try {
-                await this.db.execute(updatePasswordQuery, [hashedPassword, session.username]);
+                await this.db.execute(SharedDatabaseQueries.PasswordReset.changeUserPasswordQuery, [hashedPassword, session.username]);
                 await this.sessionManager.invalidateUserSessions(session.username);
                 return res.redirect('/login');
             } catch (error) {
@@ -304,23 +242,7 @@ class AuthenticationManager {
 
     forgotPassword = async (req, res) => {
         const { email } = req.body;
-
-        const getUserByEmailQuery = `
-            SELECT username, email, display_name FROM users WHERE email = ?;
-        `;
-
-        // TODO: CLEAR OUT UNUSED ONES IF EXPIRED, or if logged in successfully
-        const checkExistingResetQuery = `
-            SELECT reset_token FROM password_resets 
-            WHERE username = ? AND expires_at > datetime('now') AND used = FALSE;
-        `;
-
-        const insertResetTokenQuery = `
-            INSERT INTO password_resets (username, reset_token, expires_at)
-            VALUES (?, ?, ?);
-        `;
-
-        const resettingUser = await this.db.queryGet(getUserByEmailQuery, [email]);
+        const resettingUser = await this.db.queryGet(SharedDatabaseQueries.User.getUserByEmailQuery, [email]);
 
         if (!resettingUser) {
             // Immediately return success
@@ -331,7 +253,7 @@ class AuthenticationManager {
         }
 
         // Check for existing reset token
-        const existingReset = await this.db.queryGet(checkExistingResetQuery, [resettingUser.username]);
+        const existingReset = await this.db.queryGet(SharedDatabaseQueries.getPasswordResetQueryByUsername, [resettingUser.username]);
         if (existingReset) {
             return res.render('forgot-password', {
                 success: 'A password reset link has already been sent to your email. Please check your inbox.',
@@ -341,8 +263,9 @@ class AuthenticationManager {
 
         const resetToken = EncryptionManager.generateRandomToken(16);
         const expiresAt = new Date().setHours(new Date().getHours() + 1); // Expires in 1 hour
-
-        await this.db.execute(insertResetTokenQuery, [resettingUser.username, resetToken, expiresAt.toString()]);
+        
+        // TODO: CLEAR OUT UNUSED ONES IF EXPIRED, or if logged in successfully
+        await this.db.execute(SharedDatabaseQueries.PasswordReset.addResetTokenQuery, [resettingUser.username, resetToken, expiresAt.toString()]);
 
         // Build the email
         const emailText = `
@@ -382,25 +305,8 @@ class AuthenticationManager {
             });
         }
 
-        const getResetTokenQuery = `
-            SELECT pr.username, pr.expires_at, pr.used 
-            FROM password_resets pr
-            WHERE pr.reset_token = ?;
-        `;
-
-        const updatePasswordQuery = `
-            UPDATE users
-            SET password_hash = ?
-            WHERE username = ?;
-        `;
-
-        const deleteResetTokenQuery = `
-            DELETE FROM password_resets
-            WHERE username = ?;
-        `;
-
         // Validate token
-        const resetRecord = await this.db.queryGet(getResetTokenQuery, [token]);
+        const resetRecord = await this.db.queryGet(SharedDatabaseQueries.PasswordReset.getPasswordResetQueryByToken, [token]);
 
         if (!resetRecord) {
             return res.render('reset-password', {
@@ -431,13 +337,13 @@ class AuthenticationManager {
         const hashedPassword = await EncryptionManager.encryptPassword(password);
 
         // Update password
-        await this.db.execute(updatePasswordQuery, [hashedPassword, resetRecord.username]);
+        await this.db.execute(SharedDatabaseQueries.PasswordReset.changeUserPasswordQuery, [hashedPassword, resetRecord.username]);
 
         // Invalidate all existing sessions for this user
         await this.sessionManager.invalidateUserSessions(resetRecord.username);
 
         // Delete all reset tokens for this user
-        await this.db.execute(deleteResetTokenQuery, [resetRecord.username]);
+        await this.db.execute(SharedDatabaseQueries.PasswordReset.removeAllPasswordResetsQuery, [resetRecord.username]);
 
         // Redirect to login with success message
         res.redirect('/login?reset=success');
@@ -445,11 +351,7 @@ class AuthenticationManager {
 
     // Helpers
     async validate(current_password, username) {
-        const getUserQuery = `
-            SELECT * FROM users WHERE username = ?;
-        `;
-
-        const user = await this.db.queryGet(getUserQuery, [username]);
+        const user = await this.db.queryGet(SharedDatabaseQueries.User.getUserByUsernameQuery, [username]);
         if (user && await EncryptionManager.verifyPassword(user.password_hash, current_password)) {
             return true;
         } else {

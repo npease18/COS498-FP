@@ -1,4 +1,5 @@
 import EncryptionManager from "./EncryptionManager.js";
+import SharedDatabaseQueries from "../database/SharedDatabaseQueries.js";
 
 class SessionManager {
     constructor(app, db) {
@@ -10,45 +11,23 @@ class SessionManager {
     addSession(username) {
         let sessionId = `session-${EncryptionManager.generateRandomToken(16)}`;
 
-        const sessionCreateQuery = `
-            INSERT INTO sessions (session_id, username)
-            VALUES (?, ?)
-        `;
-
-        this.db.execute(sessionCreateQuery, [sessionId, username]);
+        this.db.execute(SharedDatabaseQueries.Session.addSessionQuery, [sessionId, username]);
 
         return sessionId;
     }
 
     async validateSession(sessionId) {
-        const sessionLookupQuery = `
-            SELECT *
-            FROM sessions
-            LEFT JOIN users ON sessions.username = users.username
-            WHERE session_id = ?
-        `
-
-        let isValid = await this.db.queryGet(sessionLookupQuery, [sessionId]);
-
-        return isValid;
+        console.log(SharedDatabaseQueries.Session)
+        return await this.db.queryGet(SharedDatabaseQueries.Session.getSessionQuery, [sessionId]);
     }
 
     deleteSession(sessionId) {
-        const sessionDeleteQuery = `
-            DELETE FROM sessions
-            WHERE session_id = ?
-        `;
-
-        this.db.execute(sessionDeleteQuery, [sessionId]);
+        this.db.execute(SharedDatabaseQueries.Session.removeSessionBySessionIDQuery, [sessionId]);
     }
 
+    // TODO: LOOK AND SEE IF NEEDED AWAIT
     async invalidateUserSessions(username) {
-        const userSessionsDeleteQuery = `
-            DELETE FROM sessions
-            WHERE username = ?
-        `;
-
-        await this.db.execute(userSessionsDeleteQuery, [username]);
+        await this.db.execute(SharedDatabaseQueries.Session.removeSessionByUsernameQuery, [username]);
     }
 
 }

@@ -1,3 +1,5 @@
+import SharedDatabaseQueries from "../database/SharedDatabaseQueries.js";
+
 class ChatManager {
     constructor(db, sm, sockman, app) {
         this.db = db;
@@ -29,10 +31,10 @@ class ChatManager {
     initChatAPI() {
         // Load existing chat messages API
         this.app.get('/api/chat/history', async (req, res) => this.getChatHistory(req, res) );
-        this.app.post('/api/chat/new', async (req, res) => this.newMessageAPI(req, res) );
     }
 
     // API Handlers
+    // TODO: CONVERT TO SOCKET
     async getChatHistory(req, res) {
         // Verify Session
         const sessionId = req.cookies.session;
@@ -42,48 +44,11 @@ class ChatManager {
         }
 
         // Grabbing the last 50 chats
-        const getChatsQuery = `
-            SELECT chats.username, content, chats.created_at, users.display_name, users.avatarColor
-            FROM chats
-            LEFT JOIN users ON chats.username = users.username
-            ORDER BY chats.created_at ASC
-            LIMIT 50
-        `;
-
-        const chats = await this.db.queryAll(getChatsQuery);
+        const chats = await this.db.queryAll(SharedDatabaseQueries.Chat.getLast50ChatsQuery);
 
         const chatMessages = chats.map(chat => new ChatMessage(chat));
 
         return res.json({ success: true, messages: chatMessages });
-    }
-
-    // Fairly redundant with socket version, but requested in project specs
-    // TODO: send Troy an email about this
-    async newMessageAPI(req, res) {
-        // Verify Session
-        const sessionId = req.cookies.session;
-        const session = await this.sessionManager.validateSession(sessionId);
-        if (!session) {
-            return res.status(401).json({ success: false, message: 'Unauthorized' });
-        }
-
-        const data = req.body.message;
-        if (data.trim().length > 50 || data.trim().length == 0) {
-            return res.status(400).json({ success: false, message: 'Message must be between 1 and 50 characters' });
-        }
-
-        const message = new ChatMessage(data, new Date(), session);
-
-        const addChatToDB = `
-            INSERT INTO chats (username, content, created_at)
-            VALUES (?, ?, ?)
-        `
-
-        await this.db.execute(addChatToDB, [session.username, message.content, message.createdAt.toISOString()]);
-
-        this.emitMessage(message);
-
-        return res.json({ success: true, message: 'Message sent' });
     }
 
     // Socket Chat Handlers
@@ -100,12 +65,7 @@ class ChatManager {
 
         const message = new ChatMessage(data, new Date(), session);
 
-        const addChatToDB = `
-            INSERT INTO chats (username, content, created_at)
-            VALUES (?, ?, ?)
-        `
-
-        await this.db.execute(addChatToDB, [session.username, message.content, message.createdAt.toISOString()]);
+        await this.db.execute(SharedDatabaseQueries.Chat.addChatQuery, [session.username, message.content, message.createdAt.toISOString()]);
 
         this.emitMessage(message);
     }
@@ -129,7 +89,7 @@ class ChatMessage {
         this.display_name = chat.display_name;
         this.content = chat.content;
         this.createdAt = new Date(chat.created_at);
-        this.avatarInitial = chat.username.charAt(0).toUpperCase();
+        this.avatarInitial = chat.display_name.charAt(0).toUpperCase();
         this.avatarColor = chat.avatarColor;
     }
 
@@ -138,7 +98,7 @@ class ChatMessage {
         this.display_name = session.display_name;
         this.content = content;
         this.createdAt = createdAt;
-        this.avatarInitial = session.username.charAt(0).toUpperCase();
+        this.avatarInitial = session.display_name.charAt(0).toUpperCase();
         this.avatarColor = session.avatarColor;
     }
 }

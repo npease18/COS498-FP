@@ -1,4 +1,5 @@
 import EmailManager from "../email/EmailManager.js";
+import SharedDatabaseQueries from "../database/SharedDatabaseQueries.js";
 
 const DISPLAY_NAME_MAX_LENGTH = 20;
 
@@ -36,13 +37,7 @@ class UserManager {
             return res.status(403).render('profile', { error: 'Incorrect password. Profile update failed.', user: res.locals.user });
         }
 
-        const updateProfileQuery = `
-            UPDATE users
-            SET display_name = ?, email = ?, avatarColor = ?
-            WHERE username = ?
-        `;
-
-        await this.db.execute(updateProfileQuery, [display_name, email, avatar_color, session.username]);
+        await this.db.execute(SharedDatabaseQueries.User.updateProfileQuery, [display_name, email, avatar_color, session.username]);
         
         // Check if email was updated
         if (email && email !== session.email) {

@@ -3,8 +3,7 @@ import http from "http";
 
 class SocketManager {
     constructor(rm) {
-        this.routingManager = rm;
-        this.initSocket(this.routingManager.app);
+        this.initSocket(rm.app);
     }
 
     initSocket(app) {

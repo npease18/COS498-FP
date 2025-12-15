@@ -3,9 +3,8 @@ import hbs from 'hbs';
 import cookieParser from 'cookie-parser';
 
 class RoutingManager {
-    constructor(db) {
+    constructor() {
         this.app = express();
-        this.db = db;
 
         this.setupMiddleware();
         this.setupHandlebars();
@@ -17,38 +16,24 @@ class RoutingManager {
 
     setupRoutes() {
         // Page Routes
-        this.app.get('/', (req, res) => {
-            res.render('home');
-        });
+        this.app.get('/', (req, res) => res.render('home'));
 
         this.app.get('/login', (req, res) => {
             const resetSuccess = req.query.reset === 'success';
             res.render('login', { resetSuccess });
         });
 
-        this.app.get('/register', (req, res) => {
-            res.render('register');
-        });
+        this.app.get('/register', (req, res) => res.render('register'));
 
-        this.app.get('/profile', (req, res) => {
-            res.render('profile');
-        });
+        this.app.get('/profile', (req, res) => res.render('profile'));
 
-        this.app.get('/comments', (req, res) => {
-            res.render('comments');
-        });
+        this.app.get('/comments', (req, res) => res.render('comments'));
 
-        this.app.get('/comments/new', (req, res) => {
-            res.render('new-comment');
-        });
+        this.app.get('/comments/new', (req, res) => res.render('new-comment'));
 
-        this.app.get('/chat', (req, res) => {
-            res.render('chat');
-        });
+        this.app.get('/chat', (req, res) => res.render('chat'));
 
-        this.app.get('/forgot-password', (req, res) => {
-            res.render('forgot-password');
-        });
+        this.app.get('/forgot-password', (req, res) => res.render('forgot-password'));
 
         this.app.get('/reset-password', (req, res) => {
             const token = req.query.token;

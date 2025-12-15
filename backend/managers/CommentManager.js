@@ -1,3 +1,5 @@
+import SharedDatabaseQueries from "../database/SharedDatabaseQueries.js";
+
 const MAX_COMMENTS_PER_PAGE = 10;
 const MAX_COMMENT_RENDER_LENGTH = 100;
 const MAX_COMMENT_LENGTH = 1000;
@@ -34,12 +36,8 @@ class CommentManager {
             return { success: false, message: 'Invalid comment content' };
         }
         
-        const addCommentQuery = `
-            INSERT INTO comments (username, content)
-            VALUES (?, ?)
-        `;
         try {
-            await this.db.execute(addCommentQuery, [session.username, content]);
+            await this.db.execute(SharedDatabaseQueries.Comment.addCommentQuery, [session.username, content]);
             res.redirect('/comments');
             return { success: true };
         } catch (error) {
@@ -58,21 +56,12 @@ class CommentManager {
         const page = parseInt(req.query.page) || 1;
 
         // Get total count of comments
-        const countQuery = `SELECT COUNT(*) FROM comments`;
-        let countResult = await this.db.queryAll(countQuery);
+        let countResult = await this.db.queryAll(SharedDatabaseQueries.Comment.getCommentCountQuery);
         countResult = countResult[0]["COUNT(*)"];
         const totalComments = countResult;
         const totalPages = Math.ceil(totalComments / MAX_COMMENTS_PER_PAGE);
 
-        const getCommentsQuery = `
-            SELECT users.display_name, users.avatarColor, content, comments.created_at
-            FROM comments
-            LEFT JOIN users ON comments.username = users.username
-            ORDER BY comments.created_at DESC
-            LIMIT ? OFFSET ?
-        `;
-
-        const comments = await this.db.queryAll(getCommentsQuery, [MAX_COMMENTS_PER_PAGE, (page - 1) * MAX_COMMENTS_PER_PAGE]);
+        const comments = await this.db.queryAll(SharedDatabaseQueries.Comment.getCommentsQuery, [MAX_COMMENTS_PER_PAGE, (page - 1) * MAX_COMMENTS_PER_PAGE]);
         res.locals.comments = comments.map(c => new Comment(c.display_name, c.content, c.created_at, c.avatarColor));
         
         // Add pagination info

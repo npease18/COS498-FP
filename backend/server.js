@@ -11,7 +11,7 @@ import ChatManager from "./managers/ChatManager.js";
 const PORT = process.env.PORT || 3000;
 
 let dbManager = new DBManager();
-let routingManager = new RoutingManager(dbManager);
+let routingManager = new RoutingManager();
 let socketManager = new SocketManager(routingManager);  
 let sessionManager = new SessionManager(routingManager.app, dbManager);
 let authManager = new AuthenticationManager(routingManager.app, sessionManager, dbManager);
