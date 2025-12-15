@@ -1,3 +1,7 @@
+import { count } from "console";
+
+const MAX_COMMENTS_PER_PAGE = 10;
+
 class CommentManager {
     constructor(app, db, sm) {
         this.app = app;
@@ -45,16 +49,39 @@ class CommentManager {
             return;
         }
 
+        // If page number is provided, use it; otherwise default to 1
+        const page = parseInt(req.query.page) || 1;
+
+        // Get total count of comments
+        const countQuery = `SELECT COUNT(*) FROM comments`;
+        let countResult = await this.db.queryAll(countQuery);
+        countResult = countResult[0]["COUNT(*)"];
+        const totalComments = countResult;
+        const totalPages = Math.ceil(totalComments / MAX_COMMENTS_PER_PAGE);
+
         const getCommentsQuery = `
             SELECT users.display_name, users.avatarColor, content, comments.created_at
             FROM comments
             LEFT JOIN users ON comments.username = users.username
             ORDER BY comments.created_at DESC
+            LIMIT ? OFFSET ?
         `;
 
         try {
-            const comments = await this.db.queryAll(getCommentsQuery);
+            const comments = await this.db.queryAll(getCommentsQuery, [MAX_COMMENTS_PER_PAGE, (page - 1) * MAX_COMMENTS_PER_PAGE]);
             res.locals.comments = comments.map(c => new Comment(c.display_name, c.content, c.created_at, c.avatarColor));
+            
+            // Add pagination info
+            res.locals.pagination = {
+                currentPage: page,
+                totalPages: totalPages,
+                totalComments: totalComments,
+                hasNext: page < totalPages,
+                hasPrev: page > 1,
+                nextPage: page + 1,
+                prevPage: page - 1
+            };
+            
             next();
         } catch (error) {
             next(error);

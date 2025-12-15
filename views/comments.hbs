@@ -33,6 +33,12 @@
     .empty-state h3 { color:#4a5568; margin-bottom:0.5rem; }
     .filter-bar { display:flex; gap:1rem; align-items:center; margin-bottom:1rem; font-size:0.9rem; }
     .filter-bar select { padding:0.5rem; border:1px solid #e2e8f0; border-radius:4px; background:#fff; }
+    .pagination { display:flex; justify-content:space-between; align-items:center; margin:2rem 0; padding:1rem; background:#f8f9fa; border-radius:6px; border:1px solid #e2e8f0; }
+    .pagination-info { color:#4a5568; font-size:0.9rem; }
+    .pagination-controls { display:flex; gap:0.5rem; }
+    .btn-pagination { padding:0.5rem 1rem; border-radius:4px; text-decoration:none; font-size:0.9rem; border:1px solid #e2e8f0; transition:all 0.2s; }
+    .btn-pagination:hover { background:#f1f5f9; }
+    .btn-pagination.disabled { opacity:0.5; cursor:not-allowed; pointer-events:none; }
   </style>
 </head>
 <body>
@@ -55,6 +61,27 @@
         {{#each comments}}
           {{> comment}}
         {{/each}}
+        
+        {{#if pagination}}
+        <div class="pagination">
+          <div class="pagination-info">
+            Page {{pagination.currentPage}} of {{pagination.totalPages}} ({{pagination.totalComments}} total comments)
+          </div>
+          <div class="pagination-controls">
+            {{#if pagination.hasPrev}}
+              <a href="/comments?page={{pagination.prevPage}}" class="btn-pagination btn-secondary">← Previous</a>
+            {{else}}
+              <span class="btn-pagination btn-secondary disabled">← Previous</span>
+            {{/if}}
+            
+            {{#if pagination.hasNext}}
+              <a href="/comments?page={{pagination.nextPage}}" class="btn-pagination btn-primary">Next →</a>
+            {{else}}
+              <span class="btn-pagination btn-primary disabled">Next →</span>
+            {{/if}}
+          </div>
+        </div>
+        {{/if}}
       {{else}}
         <div class="empty-state">
           <h3>No comments yet</h3>
