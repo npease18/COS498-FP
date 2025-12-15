@@ -1,6 +1,6 @@
-import { count } from "console";
-
 const MAX_COMMENTS_PER_PAGE = 10;
+const MAX_COMMENT_RENDER_LENGTH = 100;
+const MAX_COMMENT_LENGTH = 1000;
 
 class CommentManager {
     constructor(app, db, sm) {
@@ -28,6 +28,11 @@ class CommentManager {
         }
 
         const { content } = req.body
+
+        if (!content || content.length === 0 || content.length > MAX_COMMENT_LENGTH) {
+            res.redirect('/comments/new');
+            return { success: false, message: 'Invalid comment content' };
+        }
         
         const addCommentQuery = `
             INSERT INTO comments (username, content)
@@ -67,25 +72,22 @@ class CommentManager {
             LIMIT ? OFFSET ?
         `;
 
-        try {
-            const comments = await this.db.queryAll(getCommentsQuery, [MAX_COMMENTS_PER_PAGE, (page - 1) * MAX_COMMENTS_PER_PAGE]);
-            res.locals.comments = comments.map(c => new Comment(c.display_name, c.content, c.created_at, c.avatarColor));
-            
-            // Add pagination info
-            res.locals.pagination = {
-                currentPage: page,
-                totalPages: totalPages,
-                totalComments: totalComments,
-                hasNext: page < totalPages,
-                hasPrev: page > 1,
-                nextPage: page + 1,
-                prevPage: page - 1
-            };
-            
-            next();
-        } catch (error) {
-            next(error);
-        }
+        const comments = await this.db.queryAll(getCommentsQuery, [MAX_COMMENTS_PER_PAGE, (page - 1) * MAX_COMMENTS_PER_PAGE]);
+        res.locals.comments = comments.map(c => new Comment(c.display_name, c.content, c.created_at, c.avatarColor));
+        
+        // Add pagination info
+        res.locals.pagination = {
+            currentPage: page,
+            totalPages: totalPages,
+            totalComments: totalComments,
+            hasNext: page < totalPages,
+            hasPrev: page > 1,
+            nextPage: page + 1,
+            prevPage: page - 1
+        };
+        
+        next();
+
     }
 }
 
@@ -96,6 +98,11 @@ class Comment {
         this.createdAt = createdAt;
         this.avatarInitials = username.charAt(0).toUpperCase();
         this.avatarColor = avatarColor;
+        
+        // Add truncation logic for Read More functionality
+        this.isLong = content.length > MAX_COMMENT_RENDER_LENGTH;
+        this.truncatedContent = this.isLong ? content.substring(0, MAX_COMMENT_RENDER_LENGTH) + '...' : content;
+        this.fullContent = content;
     }
 }
 

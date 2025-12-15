@@ -104,6 +104,10 @@
         }
 
         function buildMessage(data) {
+            // Convert TZ
+            console.log(data.createdAt);
+            data.createdAt = new Date(data.createdAt).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' });
+
             const message = `
                 <div class="message">
                     <div class="avatar" style="background-color: ${data.avatarColor};">${data.avatarInitial}</div>

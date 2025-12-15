@@ -4,10 +4,48 @@
     <div class="avatar" style="background-color: {{avatarColor}};">{{avatarInitials}}</div>
     <div class="comment-meta">
       <h3 class="comment-author">{{username}}</h3>
-      <p class="comment-date">{{createdAt}}</p>
+      <p class="comment-date" id="createdat-{{username}}-{{createdAt}}">{{createdAt}}</p>
     </div>
   </div>
   <div class="comment-content">
-    {{content}}
+    {{#if isLong}}
+      <div class="comment-text">
+        <span class="truncated-text">{{truncatedContent}}</span>
+        <span class="full-text" style="display: none;">{{fullContent}}</span>
+      </div>
+      <div class="comment-actions" style="margin-top: 0.5rem;">
+        <button class="read-more-btn" onclick="toggleReadMore(this)" style="background: none; border: none; color: #718096; cursor: pointer; font-size: 0.9rem; padding: 0; text-decoration: none; font-weight: 500;">
+          Read More
+        </button>
+      </div>
+    {{else}}
+      {{content}}
+    {{/if}}
   </div>
 </article>
+
+{{#if isLong}}
+<script>
+  function toggleReadMore(button) {
+    const commentItem = button.closest('.comment-item');
+    const commentText = commentItem.querySelector('.comment-text');
+    const truncated = commentText.querySelector('.truncated-text');
+    const full = commentText.querySelector('.full-text');
+    
+    if (full.style.display === 'none') {
+      truncated.style.display = 'none';
+      full.style.display = 'inline';
+      button.textContent = 'Read Less';
+    } else {
+      truncated.style.display = 'inline';
+      full.style.display = 'none';
+      button.textContent = 'Read More';
+    }
+  }
+</script>
+{{/if}}
+
+<script>
+  // TZ Conversion Script
+  document.getElementById('createdat-{{username}}-{{createdAt}}').textContent = new Date('{{createdAt}}Z').toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' });
+</script>
