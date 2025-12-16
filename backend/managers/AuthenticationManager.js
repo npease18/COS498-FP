@@ -142,12 +142,18 @@ class AuthenticationManager {
             });
         }
 
-        const login_attempts = await this.db.queryGet(SharedDatabaseQueries.LoginAttempts.getLoginAttemptsQuery, [username]);
-        const endTime = await this.db.queryGet(SharedDatabaseQueries.LoginAttempts.getLockoutTimeRemainingQuery, [username]);
+        let login_attempts = await this.db.queryGet(SharedDatabaseQueries.LoginAttempts.getLoginAttemptsQuery, [username]);
+        if (login_attempts) { login_attempts = login_attempts.login_attempts_since_successful; } else { login_attempts = 0; }
+        
+        let endTime = await this.db.queryGet(SharedDatabaseQueries.LoginAttempts.getLockoutTimeRemainingQuery, [username]);
+        if (endTime) { endTime = endTime.lockout_until; } else { endTime = null; }
 
         // First, check if in timeout
-        if (endTime && new Date() < new Date(endTime)) {
-            return { success: false, message: 'Account locked due to too many failed login attempts. Please try again later.' };
+        if (new Date() < new Date(endTime)) {
+            return res.render('login', {
+                error: `Account locked due to too many failed login attempts (${login_attempts}). Please try again later.`,
+                username: username
+            });
         }
 
         // Not in timeout, proceed with login
@@ -163,7 +169,7 @@ class AuthenticationManager {
             // Not good, log failure and increment attempts
             await this.db.execute(SharedDatabaseQueries.LoginAttempts.addLoginAttemptQuery, [username, false, req.headers['x-real-ip']]);
             await this.db.execute(SharedDatabaseQueries.LoginAttempts.incrementUserLoginAttemptsQuery, [username]);
-            if (login_attempts.login_attempts_since_successful + 1 >= MAX_LOGIN_ATTEMPTS) {
+            if (login_attempts + 1 >= MAX_LOGIN_ATTEMPTS) {
                 const lockoutUntil = new Date();
                 lockoutUntil.setMinutes(lockoutUntil.getMinutes() + LOCKOUT_DURATION_MINUTES);
                 await this.db.execute(SharedDatabaseQueries.LoginAttempts.setLockoutQuery, [lockoutUntil.toISOString(), username]);
@@ -262,7 +268,7 @@ class AuthenticationManager {
         await this.emailManager.sendEmail(resettingUser.email, "Password Reset", emailText);
 
         return res.render('forgot-password', {
-            success: 'A password reset link has already been sent to your email. Please check your inbox.',
+            success: 'A password reset link has been sent to your email. Please check your inbox.',
             email: email
         });
     }

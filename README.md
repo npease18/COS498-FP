@@ -204,7 +204,6 @@ For local development and testing, the tunnel service should be disabled to allo
 
 2. **Configure email services:**
    ```bash
-   mkdir -p backend/email
    nano backend/email/.env
    # Add your email configuration (see Environment Setup section)
    ```

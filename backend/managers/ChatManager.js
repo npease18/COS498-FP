@@ -49,7 +49,7 @@ class ChatManager {
         }
 
         // Somehow a bad message come down
-        if (data.trim().length > 50 || data.trim().length == 0) {
+        if (data.trim().length > 250 || data.trim().length == 0) {
             return; // Bomb out
         }
 
