@@ -15,7 +15,7 @@ class SocketManager {
         this.server = http.createServer(app);
         this.io = new Server(this.server, {
             cors: {
-                origin: "*", // TODO: Restrict to Prod
+                origin: "https://sswd.lax18.dev",
                 methods: ["GET", "POST"]
             }
         });

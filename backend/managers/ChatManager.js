@@ -14,6 +14,7 @@ class ChatManager {
     }
 
     // Sets up the chat socket handler functions
+    // Security: Validates user sessions on connection
     initChatHandlers = () => {
         this.socketManager.io.on("connection", async (socket) => {
             // Extract Session
@@ -39,6 +40,7 @@ class ChatManager {
     // Socket Chat Handlers
 
     // Handles a new chat message from a client
+    // Security: Validates session is still valid before processing message
     newMessage = async (session, data) => {
         // Validate session is still valid
         const validSession = await this.sessionManager.validateSession(session.session_id);
@@ -58,6 +60,7 @@ class ChatManager {
     }
 
     // Handles sending historical messages to the newly connected client
+    // Security: Since this is only sending past messages, and session validation is done on connection, no further validation is needed here
     sendHistoricalMessages = async (socket) => {
         // Get last 50 messages from DB
         const chats = await this.db.queryAll(SharedDatabaseQueries.Chat.getLast50ChatsQuery);

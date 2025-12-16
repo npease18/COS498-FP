@@ -12,6 +12,7 @@ class SessionManager {
     }
 
     // Create a new session for a given username
+    // Security: Session IDs are randomly generated to not allow guessing
     addSession = (username) => {
         let sessionId = `session-${EncryptionManager.generateRandomToken(16)}`;
         this.db.execute(SharedDatabaseQueries.Session.addSessionQuery, [sessionId, username]);
@@ -25,11 +26,13 @@ class SessionManager {
     }
 
     // Validate a session by session ID
+    // Security: This is crucial, and is resposible for validating sessions across the application
     validateSession = async (sessionId) => {
         return await this.db.queryGet(SharedDatabaseQueries.Session.getSessionQuery, [sessionId]);
     }
 
     // Invalidate all sessions for a given username
+    // Security: This is used to log out all sessions when a password is changed
     invalidateUserSessions = async (username) => {
         await this.db.execute(SharedDatabaseQueries.Session.removeSessionByUsernameQuery, [username]);
     }

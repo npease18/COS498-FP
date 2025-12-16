@@ -33,6 +33,7 @@ class AuthenticationManager {
     }
 
     // Authentication Validator for Protected Routes
+    // In order to protect routes, this is verfied before any actual page content is sent to the user
     requireAuth = async (req, res, next) => {
         const sessionId = req.cookies.session;
 
@@ -51,6 +52,8 @@ class AuthenticationManager {
     }
 
     // Validate Reset Password Token Exists / Valid
+    // This middleware checks if the reset password token is valid before allowing access to the reset password page
+    // This protects against invalid/expired tokens being used to access the reset password page
     newPasswordTokenCheck = async (req, res, next) => {
         // Only applies to reset password page
         if (req.path === '/reset-password') {
@@ -182,6 +185,8 @@ class AuthenticationManager {
     }
 
     // Change Password
+    // To ensure security, this invalidates all existing sessions upon a successful password change
+    // This function is called while logged in, so it also verifies the user is currently signed in
     changePW = async (req, res) => {
         const { current_password, new_password } = req.body;
         const sessionId = req.cookies.session;
@@ -215,6 +220,7 @@ class AuthenticationManager {
     }
 
     // Forgot Password
+    // Sends password reset email if user/email exists
     forgotPassword = async (req, res) => {
         const { email } = req.body;
         const resettingUser = await this.db.queryGet(SharedDatabaseQueries.User.getUserByEmailQuery, [email]);
@@ -262,6 +268,7 @@ class AuthenticationManager {
     }
 
     // Reset Password
+    // This validates the forgot password token is authentic and not expired before allowing any changes
     resetPassword = async (req, res) => {
         const { token, password, confirmPassword } = req.body;
 

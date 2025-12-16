@@ -17,8 +17,8 @@ let socketManager   = new SocketManager             (routingManager.app);
 let sessionManager  = new SessionManager            (routingManager.app, dbManager);
 let authManager     = new AuthenticationManager     (routingManager.app, dbManager, sessionManager);
 let commentManager  = new CommentManager            (routingManager.app, dbManager, sessionManager);
+let chatManager     = new ChatManager               (socketManager,      dbManager, sessionManager); 
 let userManager     = new UserManager               (routingManager.app, dbManager, sessionManager, authManager);
-let chatManager     = new ChatManager               (socketManager,      dbManager, sessionManager);
 
 // Gotta load the routes after all the middleware setup
 routingManager.setupRoutes();

@@ -25,6 +25,7 @@ class CommentManager {
     }
 
     // Middleware to get comments for /comments route with pagination
+    // Security: This should already be protected by AuthenticationManager.requireAuth, but session is validated again for redundancy before comments are served
     getComments = async (req, res, next) => {
         // Only process for /comments route
         if (req.path !== '/comments') {
@@ -73,6 +74,7 @@ class CommentManager {
     }
     
     // Adds a new comment
+    // Security: Validates session before allowing comment addition
     addComment = async (req, res) => {
         // Validate Session
         const sessionToken = req.cookies.session;
