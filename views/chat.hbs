@@ -62,22 +62,9 @@
     <script src="https://cdn.socket.io/4.8.1/socket.io.min.js"></script>
 
     <script>
-        // On initial load, fetch chat history
-        fetch('/api/chat/history')
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    const chatMessages = document.getElementById('chatMessages');
-                    chatMessages.innerHTML = ''; // Clear existing messages / placeholder
-                    data.messages.forEach(message => {
-                        const messageDiv = buildMessage(message);
-                        chatMessages.appendChild(messageDiv);
-                    });
-                    chatMessages.scrollTop = chatMessages.scrollHeight;
-                }
-            });
-
         const socket = io("https://sswd.lax18.dev");
+
+        socket.emit('history');
 
         socket.on("message", (data) => {
             const chatMessages = document.getElementById('chatMessages');
@@ -105,7 +92,6 @@
 
         function buildMessage(data) {
             // Convert TZ
-            console.log(data.createdAt);
             data.createdAt = new Date(data.createdAt).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' });
 
             const message = `
@@ -113,7 +99,7 @@
                     <div class="avatar" style="background-color: ${data.avatarColor};">${data.avatarInitial}</div>
                     <div class="message-content">
                         <div class="message-meta">
-                            <span class="message-author">${data.display_name}</span>
+                            <span class="message-author">${data.display_name} (@${data.username})</span>
                             <span class="message-time">${data.createdAt}</span>
                         </div>
                         <div class="message-text">${data.content}</div>

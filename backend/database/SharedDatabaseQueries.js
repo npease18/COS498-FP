@@ -1,14 +1,21 @@
+// Shared Database Queries (Static)
+// Centralized SQL queries for various database operations
+
+//  Naming Convention:
+//  Each query is grouped by its related area of software
+
+//  Within each entity, queries are categorized by their operation type:
 //  Section
-//      Getters    - get*
-//      Insertions - add*
-//      Updaters   - update*
-//      Deleters   - remove*
+//      Getters    - get*Query
+//      Insertions - add*Query
+//      Updaters   - *Query
+//      Deleters   - remove*Query
 
 class SharedDatabaseQueries {
     // Chat Related Queries
     static Chat = {
         // Getters
-        getLast50ChatsQuery : `
+        getLast50ChatsQuery: `
             SELECT chats.username, content, chats.created_at, users.display_name, users.avatarColor
             FROM chats
             LEFT JOIN users ON chats.username = users.username
@@ -28,7 +35,7 @@ class SharedDatabaseQueries {
     static Comment = {
         // Getters
         getCommentsQuery : `
-            SELECT users.display_name, users.avatarColor, content, comments.created_at
+            SELECT users.username, users.display_name, users.avatarColor, content, comments.created_at
             FROM comments
             LEFT JOIN users ON comments.username = users.username
             ORDER BY comments.created_at DESC
@@ -43,7 +50,6 @@ class SharedDatabaseQueries {
             VALUES (?, ?)`,
 
         // Updaters
-
         // Deleters
     }
 
@@ -84,9 +90,9 @@ class SharedDatabaseQueries {
     static PasswordReset = {
         // Getters
         getPasswordResetQueryByToken : `
-            SELECT pr.username, pr.expires_at, pr.used 
-            FROM password_resets pr
-            WHERE pr.reset_token = ?;`,
+            SELECT username, expires_at
+            FROM password_resets
+            WHERE reset_token = ?;`,
         
         getPasswordResetQueryByUsername : `
             SELECT reset_token FROM password_resets 
@@ -124,7 +130,6 @@ class SharedDatabaseQueries {
             VALUES (?, ?)`,
 
         // Updaters
-
         // Deleters
         removeSessionByUsernameQuery : `
             DELETE FROM sessions

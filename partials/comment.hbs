@@ -3,7 +3,7 @@
   <div class="comment-header">
     <div class="avatar" style="background-color: {{avatarColor}};">{{avatarInitials}}</div>
     <div class="comment-meta">
-      <h3 class="comment-author">{{username}}</h3>
+      <h3 class="comment-author">{{display_name}} (@{{username}})</h3>
       <p class="comment-date" id="createdat-{{username}}-{{createdAt}}">{{createdAt}}</p>
     </div>
   </div>
@@ -19,7 +19,7 @@
         </button>
       </div>
     {{else}}
-      {{content}}
+      {{{content}}}
     {{/if}}
   </div>
 </article>

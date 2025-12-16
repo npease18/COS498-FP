@@ -1,3 +1,7 @@
+// Routing Manager
+// Handles application routing and view rendering
+
+// Imports
 import express from 'express';
 import hbs from 'hbs';
 import cookieParser from 'cookie-parser';
@@ -10,10 +14,8 @@ class RoutingManager {
         this.setupHandlebars();
     }
 
-    initRoutes() {
-        this.setupRoutes();
-    }
-
+    // Sets up application routes
+    // NOTE: this must be called after all middleware is setup
     setupRoutes() {
         // Page Routes
         this.app.get('/', (req, res) => res.render('home'));
@@ -50,6 +52,7 @@ class RoutingManager {
         });
     }
 
+    // Set up generic express middleware
     setupMiddleware() {
         this.app.use(express.json());
         this.app.use(express.urlencoded({ extended: true }));
@@ -58,6 +61,7 @@ class RoutingManager {
         this.app.use(express.static('../public'));
     }
 
+    // Set up Handlebars as the view engine
     setupHandlebars() {
         // Handlebars
         this.app.set('view engine', 'hbs');

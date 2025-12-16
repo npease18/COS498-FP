@@ -1,26 +1,27 @@
 // Import Managers
-import RoutingManager from "./managers/RoutingManager.js";
-import AuthenticationManager from "./managers/AuthenticationManager.js";
-import SessionManager from "./managers/SessionManager.js";
-import DBManager from "./database/DBManager.js";
-import CommentManager from "./managers/CommentManager.js";
-import UserManager from "./managers/UserManager.js";
-import SocketManager from "./managers/SocketManager.js";
-import ChatManager from "./managers/ChatManager.js";
+import AuthenticationManager    from "./managers/AuthenticationManager.js";
+import ChatManager              from "./managers/ChatManager.js";
+import CommentManager           from "./managers/CommentManager.js";
+import DBManager                from "./database/DBManager.js";
+import RoutingManager           from "./managers/RoutingManager.js";
+import SessionManager           from "./managers/SessionManager.js";
+import SocketManager            from "./managers/SocketManager.js";
+import UserManager              from "./managers/UserManager.js";
 
 const PORT = process.env.PORT || 3000;
 
-let dbManager = new DBManager();
-let routingManager = new RoutingManager();
-let socketManager = new SocketManager(routingManager);  
-let sessionManager = new SessionManager(routingManager.app, dbManager);
-let authManager = new AuthenticationManager(routingManager.app, sessionManager, dbManager);
-let commentManager = new CommentManager(routingManager.app, dbManager, sessionManager);
-let userManager = new UserManager(routingManager.app, dbManager, sessionManager, authManager);
-let chatManager = new ChatManager(dbManager, sessionManager, socketManager, routingManager.app);
+// Initialize Managers
+let dbManager       = new DBManager                 ();
+let routingManager  = new RoutingManager            ();
+let socketManager   = new SocketManager             (routingManager.app);  
+let sessionManager  = new SessionManager            (routingManager.app, dbManager);
+let authManager     = new AuthenticationManager     (routingManager.app, dbManager, sessionManager);
+let commentManager  = new CommentManager            (routingManager.app, dbManager, sessionManager);
+let userManager     = new UserManager               (routingManager.app, dbManager, sessionManager, authManager);
+let chatManager     = new ChatManager               (socketManager,      dbManager, sessionManager);
 
 // Gotta load the routes after all the middleware setup
-routingManager.initRoutes();
+routingManager.setupRoutes();
 
 // Start server
 socketManager.server.listen(PORT, '0.0.0.0', () => {

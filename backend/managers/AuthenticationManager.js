@@ -1,116 +1,48 @@
+// Authentication Manager
+// This manager handles user authentication via login, logout, registration, password changes, and password resets.
+// 
+// It also includes middleware to protect certain routes and validate password reset tokens.
+
+// Imports
 import { PasswordPolicyValidationCode, default as EncryptionManager } from './EncryptionManager.js';
 import EmailManager from '../email/EmailManager.js';
 import SharedDatabaseQueries from "../database/SharedDatabaseQueries.js";
 
-const authedPaths = ['/comments', '/comments/new', '/profile', '/chat'];
-
-const MAX_LOGIN_ATTEMPTS = 5;
-const LOCKOUT_DURATION_MINUTES = 15;
+// Constants
+const authedPaths = ['/comments', '/comments/new', '/profile', '/chat'];     // Array of Paths Requiring Authentication
+const MAX_LOGIN_ATTEMPTS = 5;                                                // Max Login Attempts Before Lockout
+const LOCKOUT_DURATION_MINUTES = 15;                                         // Lockout Duration in Minutes
 
 class AuthenticationManager {
-    constructor(app, sm, db) {
+
+    // Initializer for the Authentication Manager
+    constructor(app, db, sm ) {
         this.app = app;
         this.sessionManager = sm;
         this.db = db;
         this.emailManager = new EmailManager();
 
-        this.setupAuthMiddleware();
-        this.setupAuthAPIs();
+        this.setupMiddleware();
+        this.setupAPIs();
     }
 
-    // Setups
-    setupAuthAPIs() {
-        // API Routes
-        this.app.post('/api/register', async (req, res) => {
-            const { username, email, password } = req.body;
-
-            const result = await this.registerUser(req, res);
-
-            if (result.success) {
-                res.cookie('session', this.sessionManager.addSession(username), {
-                    httpOnly: true,
-                    secure: false, // Set to true in production with HTTPS
-                    sameSite: 'lax',
-                    maxAge: 24 * 60 * 60 * 1000 // 24 hours
-                });
-                res.redirect('/comments');
-            } else {
-                return res.render('register', {
-                    error: result.message,
-                    username: username,
-                    email: email
-                });
-            }
-        });
-
-        this.app.post('/api/login', async (req, res) => {
-            const { username, password } = req.body;
-
-            const result = await this.login(req, res);
-
-            if (result.success) {
-                // Set session cookie and redirect on success
-                res.cookie('session', this.sessionManager.addSession(username), {
-                    httpOnly: true,
-                    secure: false, // Set to true in production with HTTPS
-                    sameSite: 'lax',
-                    maxAge: 24 * 60 * 60 * 1000 // 24 hours
-                });
-                res.redirect('/comments');
-            } else {
-                // Render login page with error on failure
-                return res.render('login', {
-                    error: result.message,
-                    username: username
-                });
-            }
-        });
-
-        this.app.post('/api/logout', async (req, res) => this.logout(req, res));
-
-        this.app.post('/api/change-password', async (req, res) => this.changePW(req, res));
-
-        this.app.post('/api/forgot-password', async (req, res) => this.forgotPassword(req, res));
-
-        this.app.post('/api/reset-password', async (req, res) => this.resetPassword(req, res));
-    }
-
-    setupAuthMiddleware() {
+    // Setup Middleware
+    setupMiddleware = () => {
         this.app.use(this.requireAuth);
-        this.app.use(this.addUserToContext);
         this.app.use(this.newPasswordTokenCheck);
     }
 
-    // Middleware
-
-    // Insert User Data into res.locals
-    // todo: move to user manager
-    addUserToContext = async (req, res, next) => {
-        const sessionId = req.cookies.session;
-
-        if (sessionId) {
-            const session = await this.sessionManager.validateSession(sessionId);
-            if (session) {
-                res.locals.user = {
-                    profile_letter: session.username.charAt(0).toUpperCase(),
-                    user_object: session,
-                    sessionId: sessionId
-                };
-            }
-        }
-
-        next();
-    }
-
-    // Require Authentication for Certain Pages
+    // Authentication Validator for Protected Routes
     requireAuth = async (req, res, next) => {
         const sessionId = req.cookies.session;
 
+        // Skip if not a protected route
         if (!authedPaths.includes(req.path)) {
             next();
             return;
         }
 
+        // Valid Session = Authed to Proceed
         if (sessionId && await this.sessionManager.validateSession(sessionId)) {
             next();
         } else {
@@ -120,9 +52,11 @@ class AuthenticationManager {
 
     // Validate Reset Password Token Exists / Valid
     newPasswordTokenCheck = async (req, res, next) => {
+        // Only applies to reset password page
         if (req.path === '/reset-password') {
             const { token } = req.query;
 
+            // No token is instant deny
             if (!token) {
                 return res.render('reset-password', {
                     validToken: false,
@@ -132,7 +66,8 @@ class AuthenticationManager {
 
             const resetRecord = await this.db.queryGet(SharedDatabaseQueries.PasswordReset.getPasswordResetQueryByToken, [token]);
 
-            if (!resetRecord || resetRecord.used || new Date() > new Date(resetRecord.expires_at)) {
+            // If the record is missing or expired, deny
+            if (!resetRecord || new Date() > new Date(resetRecord.expires_at)) {
                 return res.render('reset-password', {
                     validToken: false,
                     error: 'Invalid or expired reset token'
@@ -145,46 +80,82 @@ class AuthenticationManager {
         }
     }
 
-    // Base Functions
-    async registerUser(req, res) {
-        const { username, email, password } = req.body;
+    // Setup API Routes
+    setupAPIs() {
+        this.app.post('/api/register', async (req, res) => this.registerUser(req, res));
 
+        this.app.post('/api/login', async (req, res) => this.login(req, res));
+
+        this.app.post('/api/logout', async (req, res) => this.logout(req, res));
+
+        this.app.post('/api/change-password', async (req, res) => this.changePW(req, res));
+
+        this.app.post('/api/forgot-password', async (req, res) => this.forgotPassword(req, res));
+
+        this.app.post('/api/reset-password', async (req, res) => this.resetPassword(req, res));
+    }
+
+    // Register New User
+    registerUser = async (req, res) => {
+        const { username, email, password, displayName } = req.body;
+
+        // Check if user/email already exists
+        if (await this.doesUserExist(username, email)) {
+            return res.render('register', {
+                error: 'Registration failed. Username or email may already be in use.',
+            });
+        }
+
+        // Check if password meets policy
         const passwordValidationCode = await EncryptionManager.validatePasswordPolicy(password);
         if (passwordValidationCode !== PasswordPolicyValidationCode.VALID) {
-            return { success: false, message: passwordValidationCode };
+            return res.render('register', {
+                error: 'Password does not meet complexity requirements.',
+                message: passwordValidationCode,
+            });
         }
 
         const hashedPassword = await EncryptionManager.encryptPassword(password);
 
-        try {
-            await this.db.execute(SharedDatabaseQueries.User.addUserQuery, [username, email, hashedPassword, username]);
-            await this.db.execute(SharedDatabaseQueries.LoginAttempts.addLoginAttemptQuery, [username, true, req.headers['x-real-ip']]); // Technically counts as a login
-            return { success: true };
-        } catch (error) {
-            return { success: false, message: 'Username or email already exists' };
-        }
+        await this.db.execute(SharedDatabaseQueries.User.addUserQuery, [username, email, hashedPassword, displayName]);
+        await this.db.execute(SharedDatabaseQueries.LoginAttempts.addLoginAttemptQuery, [username, true, req.headers['x-real-ip']]); // Technically counts as a login
+        
+        // Registered, go ahead and log in
+        this.sessionManager.addSessionCookie(res, this.sessionManager.addSession(username));
+        res.redirect('/comments');
     }
 
-    async login(req, res) {
+    // User Login
+    login = async (req, res) => {
         const { username, password } = req.body;
+
+        const user = await this.db.queryGet(SharedDatabaseQueries.User.getUserByUsernameQuery, [username]);
+
+        // If user does not exist, fail
+        if (!user) {
+            return res.render('login', {
+                error: "Invalid username or password",
+                username: username
+            });
+        }
 
         const login_attempts = await this.db.queryGet(SharedDatabaseQueries.LoginAttempts.getLoginAttemptsQuery, [username]);
         const endTime = await this.db.queryGet(SharedDatabaseQueries.LoginAttempts.getLockoutTimeRemainingQuery, [username]);
 
         // First, check if in timeout
-        if (new Date() < new Date(endTime.lockout_until)) {
+        if (endTime && new Date() < new Date(endTime)) {
             return { success: false, message: 'Account locked due to too many failed login attempts. Please try again later.' };
         }
 
         // Not in timeout, proceed with login
-        const user = await this.db.queryGet(SharedDatabaseQueries.User.getUserByUsernameQuery, [username]);
         if (user && await EncryptionManager.verifyPassword(user.password_hash, password)) {
             // Good to login, log and reset failures if any
             await this.db.execute(SharedDatabaseQueries.LoginAttempts.addLoginAttemptQuery, [username, true, req.headers['x-real-ip']]);
             await this.db.execute(SharedDatabaseQueries.LoginAttempts.setLockoutQuery, [null, username]);
             await this.db.execute(SharedDatabaseQueries.LoginAttempts.resetLoginAttemptsQuery, [username]);
-            await this.db.execute(SharedDatabaseQueries.removeAllPasswordResetsQuery, [username]);
-            return { success: true, user: user };
+            await this.db.execute(SharedDatabaseQueries.PasswordReset.removeAllPasswordResetsQuery, [username]);
+            this.sessionManager.addSessionCookie(res, this.sessionManager.addSession(username));
+            res.redirect('/comments');
         } else {
             // Not good, log failure and increment attempts
             await this.db.execute(SharedDatabaseQueries.LoginAttempts.addLoginAttemptQuery, [username, false, req.headers['x-real-ip']]);
@@ -194,33 +165,36 @@ class AuthenticationManager {
                 lockoutUntil.setMinutes(lockoutUntil.getMinutes() + LOCKOUT_DURATION_MINUTES);
                 await this.db.execute(SharedDatabaseQueries.LoginAttempts.setLockoutQuery, [lockoutUntil.toISOString(), username]);
             }
-            return { success: false, message: 'Invalid username or password' };
+            return res.render('login', {
+                error: "Invalid username or password",
+                username: username
+            });
         }
     }
 
-    async logout(req, res) {
+    // User Logout
+    logout = async (req, res) => {
         const sessionId = req.cookies.session;
         if (sessionId && this.sessionManager.validateSession(sessionId)) {
-            this.sessionManager.deleteSession(sessionId);
+            this.sessionManager.deleteSession(sessionId, res);
         }
-        res.clearCookie('session', {
-            httpOnly: true,
-            secure: false, // Set to true in production with HTTPS
-            sameSite: 'lax'
-        });
         res.redirect('/');
     }
 
-    async changePW(req, res) {
+    // Change Password
+    changePW = async (req, res) => {
         const { current_password, new_password } = req.body;
         const sessionId = req.cookies.session;
         const session = await this.sessionManager.validateSession(sessionId);
 
+        // No valid session, bomb out
         if (!session) {
             return res.render('profile', { error: 'No valid session', user: res.locals.user });
         }
 
+        // Check if valid current password
         if (await this.validate(current_password, session.username) == true) {
+            // Check policy
             const passwordValidationCode = await EncryptionManager.validatePasswordPolicy(new_password);
             if (passwordValidationCode !== PasswordPolicyValidationCode.VALID) {
                 return res.render('profile', { error: passwordValidationCode, user: res.locals.user });
@@ -240,12 +214,13 @@ class AuthenticationManager {
         }
     }
 
+    // Forgot Password
     forgotPassword = async (req, res) => {
         const { email } = req.body;
         const resettingUser = await this.db.queryGet(SharedDatabaseQueries.User.getUserByEmailQuery, [email]);
 
         if (!resettingUser) {
-            // Immediately return success
+            // Immediately return success to mask that user does not exist
             return res.render('forgot-password', {
                 success: 'If an account with that email exists, a password reset link is on the way',
                 email: email
@@ -253,7 +228,7 @@ class AuthenticationManager {
         }
 
         // Check for existing reset token
-        const existingReset = await this.db.queryGet(SharedDatabaseQueries.getPasswordResetQueryByUsername, [resettingUser.username]);
+        const existingReset = await this.db.queryGet(SharedDatabaseQueries.PasswordReset.getPasswordResetQueryByUsername, [resettingUser.username]);
         if (existingReset) {
             return res.render('forgot-password', {
                 success: 'A password reset link has already been sent to your email. Please check your inbox.',
@@ -264,7 +239,6 @@ class AuthenticationManager {
         const resetToken = EncryptionManager.generateRandomToken(16);
         const expiresAt = new Date().setHours(new Date().getHours() + 1); // Expires in 1 hour
         
-        // TODO: CLEAR OUT UNUSED ONES IF EXPIRED, or if logged in successfully
         await this.db.execute(SharedDatabaseQueries.PasswordReset.addResetTokenQuery, [resettingUser.username, resetToken, expiresAt.toString()]);
 
         // Build the email
@@ -287,16 +261,19 @@ class AuthenticationManager {
         });
     }
 
-    async resetPassword(req, res) {
+    // Reset Password
+    resetPassword = async (req, res) => {
         const { token, password, confirmPassword } = req.body;
 
+        // If no token, bomb out
         if (!token) {
             return res.render('reset-password', {
                 validToken: false,
-                error: 'Invalid reset token'
+                error: 'No reset token provided'
             });
         }
 
+        // Check passwords match
         if (password !== confirmPassword) {
             return res.render('reset-password', {
                 validToken: true,
@@ -307,7 +284,6 @@ class AuthenticationManager {
 
         // Validate token
         const resetRecord = await this.db.queryGet(SharedDatabaseQueries.PasswordReset.getPasswordResetQueryByToken, [token]);
-
         if (!resetRecord) {
             return res.render('reset-password', {
                 validToken: false,
@@ -350,13 +326,23 @@ class AuthenticationManager {
     }
 
     // Helpers
-    async validate(current_password, username) {
+
+    // Validate password matches hashed password for user
+    validate = async (current_password, username) => {
         const user = await this.db.queryGet(SharedDatabaseQueries.User.getUserByUsernameQuery, [username]);
         if (user && await EncryptionManager.verifyPassword(user.password_hash, current_password)) {
             return true;
         } else {
             return false;
         }
+    }
+
+    // Determine if conflicting email/username exists
+    doesUserExist = async (username, email) => {
+        const userByUsername = await this.db.queryGet(SharedDatabaseQueries.User.getUserByUsernameQuery, [username]);
+        const userByEmail = await this.db.queryGet(SharedDatabaseQueries.User.getUserByEmailQuery, [email]);
+
+        return (userByUsername || userByEmail);
     }
 
 }

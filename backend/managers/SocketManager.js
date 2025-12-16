@@ -1,11 +1,16 @@
+// Socket Manager
+// Handles WebSocket setup and management
+
+// Imports
 import { Server } from "socket.io";
 import http from "http";
 
 class SocketManager {
-    constructor(rm) {
-        this.initSocket(rm.app);
+    constructor(app) {
+        this.initSocket(app);
     }
 
+    // Initializes shared Express/Socket.io server
     initSocket(app) {
         this.server = http.createServer(app);
         this.io = new Server(this.server, {

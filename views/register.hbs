@@ -49,6 +49,11 @@
       
       <form method="POST" action="/api/register">
         <div class="form-group">
+          <label for="displayName">Display Name</label>
+          <input id="displayName" name="displayName" type="text" required placeholder="Enter your display name" value="{{displayName}}">
+        </div>
+
+        <div class="form-group">
           <label for="username">Username</label>
           <input id="username" name="username" type="text" required placeholder="Choose a username" value="{{username}}">
         </div>
